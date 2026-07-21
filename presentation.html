@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Problem 03 — LiDAR Coverage &amp; Hazard Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cobalt-50:#E8EFFC; --cobalt-100:#D2E0FA; --cobalt-200:#A6C1F4; --cobalt-300:#79A1ED;
+  --cobalt-400:#4D7FE3; --cobalt-500:#1F5FD6; --cobalt-600:#004ACB; --cobalt-700:#003DA8;
+  --cobalt-800:#002F82; --cobalt-900:#00235E;
+  --volt-300:#E3FF66; --volt-400:#D9FF33; --volt-500:#CEFF00; --volt-600:#A5CC00; --volt-700:#647A00;
+  --navy-950:#10122E; --navy-900:#1C1F48;
+  --ice:#E9F1F7;
+  --neutral-0:#FFFFFF; --neutral-50:#F6F8FB; --neutral-100:#E9EDF4; --neutral-200:#D4DAE7;
+  --neutral-300:#B0B8CC; --neutral-400:#8891AB; --neutral-500:#67718F; --neutral-600:#4D5674;
+  --neutral-700:#363E5C; --neutral-800:#262C4A; --neutral-900:#1C1F48; --neutral-950:#10122E;
+  --success-600:#0E7A43; --success-100:#DCF5E7; --success-300:#5BD598;
+  --warning-600:#A16207; --warning-100:#FBF0D4; --warning-300:#F5C64C;
+  --error-600:#C22C1F;  --error-100:#FBE3E0;  --error-300:#F2988E;
+  --info-600:#0B62B8;   --info-100:#DEEDFB;   --info-300:#7DBCF0;
+
+  --bg:#FFFFFF; --bg-subtle:#F6F8FB; --bg-section:#E9F1F7; --bg-inverse:#1C1F48;
+  --surface:#FFFFFF; --surface-raised:#FFFFFF; --surface-overlay:rgba(28,31,72,0.5);
+  --text:#1C1F48; --text-secondary:#4D5674; --text-muted:#67718F; --text-inverse:#FFFFFF;
+  --text-on-primary:#FFFFFF; --text-on-accent:#1C1F48;
+  --border:#D4DAE7; --border-strong:#B0B8CC; --border-focus:#004ACB;
+  --primary:#004ACB; --primary-hover:#003DA8; --primary-active:#002F82; --primary-subtle:#E8EFFC;
+  --accent:#CEFF00; --accent-hover:#D9FF33; --accent-subtle:#F4FFC2;
+  --success:#0E7A43; --success-bg:#DCF5E7; --warning:#A16207; --warning-bg:#FBF0D4;
+  --error:#C22C1F; --error-bg:#FBE3E0; --info:#0B62B8; --info-bg:#DEEDFB;
+  --ring:0 0 0 2px var(--bg), 0 0 0 4px var(--border-focus);
+
+  --font-sans:'Instrument Sans','Helvetica Neue',Helvetica,Arial,sans-serif;
+  --text-display:4.5rem; --lh-display:1.02; --ls-display:-0.02em;
+  --text-h1:3rem;   --lh-h1:1.08;  --ls-h1:-0.015em;
+  --text-h2:2.25rem;--lh-h2:1.15;  --ls-h2:-0.01em;
+  --text-h3:1.875rem;--lh-h3:1.2;
+  --text-h4:1.5rem; --lh-h4:1.3;
+  --text-lg:1.125rem;--lh-lg:1.6;
+  --text-base:1rem; --lh-base:1.55;
+  --text-sm:0.875rem;--lh-sm:1.5;  --text-xs:0.75rem; --lh-xs:1.45;
+  --weight-regular:400; --weight-medium:500; --weight-semibold:600;
+
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
+  --space-6:24px; --space-8:32px; --space-10:40px; --space-12:48px; --space-16:64px;
+  --space-20:80px; --space-24:96px;
+
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:24px; --radius-full:9999px;
+
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.10);
+  --shadow-md:0 2px 6px rgba(0,0,0,0.12);
+  --shadow-lg:0 6px 16px rgba(16,18,46,0.14);
+  --shadow-xl:0 12px 32px rgba(16,18,46,0.18);
+
+  --duration-fast:150ms; --duration-base:250ms; --duration-slow:400ms;
+  --ease-standard:cubic-bezier(0.2,0,0,1); --ease-enter:cubic-bezier(0,0,0.2,1);
+}
+
+html[data-theme="dark"] {
+  --bg:#0B0D1A; --bg-subtle:#12141F; --bg-section:#151827; --bg-inverse:#E9F1F7;
+  --surface:#12141F; --surface-raised:#1A1D2B; --surface-overlay:rgba(4,5,12,0.7);
+  --text:#E9F1F7; --text-secondary:#A8AFC2; --text-muted:#7E869C; --text-inverse:#1C1F48;
+  --text-on-primary:#FFFFFF; --text-on-accent:#1C1F48;
+  --border:#272B3D; --border-strong:#3D4258; --border-focus:#79A1ED;
+  --primary:#4D7FE3; --primary-hover:#79A1ED; --primary-active:#A6C1F4; --primary-subtle:#1A2A55;
+  --accent:#CEFF00; --accent-hover:#D9FF33; --accent-subtle:#3A4200;
+  --success:#5BD598; --success-bg:#0B3B23; --warning:#F5C64C; --warning-bg:#3E2E06;
+  --error:#F2988E; --error-bg:#4A1610; --info:#7DBCF0; --info-bg:#0A2E4E;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.4); --shadow-md:0 2px 6px rgba(0,0,0,0.45);
+  --shadow-lg:0 6px 16px rgba(0,0,0,0.5); --shadow-xl:0 12px 32px rgba(0,0,0,0.55);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+*:focus-visible { outline:none; box-shadow:var(--ring); border-radius:var(--radius-sm); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+}
+
+/* ---------- Deck chrome ---------- */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; background: var(--primary);
+  z-index: 50; transition: width var(--duration-base) var(--ease-standard);
+}
+
+.deck-controls {
+  position: fixed; top: var(--space-5); right: var(--space-6); z-index: 60;
+  display: flex; gap: var(--space-2); align-items: center;
+}
+.icon-btn {
+  width: 40px; height: 40px; border-radius: var(--radius-full);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  font-size: 1rem; transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast);
+  box-shadow: var(--shadow-sm);
+}
+.icon-btn:hover { background: var(--bg-subtle); color: var(--text); }
+
+.nav-arrow {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 55;
+  width: 48px; height: 48px; border-radius: var(--radius-full);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  font-size: 1.25rem; box-shadow: var(--shadow-md);
+  transition: background var(--duration-fast) var(--ease-standard), opacity var(--duration-fast), color var(--duration-fast);
+}
+.nav-arrow:hover { background: var(--primary-subtle); color: var(--primary); }
+.nav-arrow.prev { left: var(--space-6); }
+.nav-arrow.next { right: var(--space-6); }
+.nav-arrow:disabled { opacity: 0.3; cursor: default; }
+.nav-arrow:disabled:hover { background: var(--surface); color: var(--text-secondary); }
+
+.dots {
+  position: fixed; bottom: var(--space-6); left: 50%; transform: translateX(-50%);
+  z-index: 55; display: flex; gap: var(--space-2); align-items: center;
+  background: var(--surface); border: 1px solid var(--border); padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full); box-shadow: var(--shadow-md);
+}
+.dot {
+  width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--border-strong);
+  cursor: pointer; border: none; padding: 0; transition: background var(--duration-fast), width var(--duration-fast);
+}
+.dot[aria-current="true"] { background: var(--primary); width: 20px; border-radius: var(--radius-full); }
+
+.counter {
+  position: fixed; bottom: var(--space-6); right: var(--space-6); z-index: 55;
+  font-size: var(--text-sm); color: var(--text-muted); font-variant-numeric: tabular-nums;
+  background: var(--surface); border: 1px solid var(--border); padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full); box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Slides ---------- */
+.deck {
+  position: relative; width: 100%; height: 100%;
+}
+.slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--space-24) 12vw;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transform: translateX(24px);
+  transition: opacity var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard);
+}
+.slide[aria-current="true"] {
+  opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0);
+}
+.slide.exit-left { transform: translateX(-24px); }
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-size: var(--text-sm); font-weight: var(--weight-semibold); letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--primary); margin-bottom: var(--space-4);
+}
+.eyebrow::before { content: ""; width: 22px; height: 3px; background: var(--accent); border-radius: var(--radius-full); display: inline-block; }
+
+h1.display {
+  font-size: clamp(2.4rem, 4.2vw, var(--text-display)); line-height: var(--lh-display);
+  letter-spacing: var(--ls-display); font-weight: var(--weight-medium); margin: 0 0 var(--space-5) 0;
+}
+h1.h1 {
+  font-size: clamp(2rem, 3.2vw, var(--text-h1)); line-height: var(--lh-h1);
+  letter-spacing: var(--ls-h1); font-weight: var(--weight-medium); margin: 0 0 var(--space-5) 0;
+}
+.subtitle {
+  font-size: var(--text-lg); line-height: var(--lh-lg); color: var(--text-secondary);
+  max-width: 46em; margin: 0 0 var(--space-8) 0;
+}
+.body-text { font-size: var(--text-lg); line-height: var(--lh-lg); color: var(--text-secondary); max-width: 50em; }
+
+.card-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+.card-grid.two { grid-template-columns: repeat(2, 1fr); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: var(--space-6); box-shadow: var(--shadow-sm);
+}
+.card h3 { font-size: var(--text-h4); font-weight: var(--weight-semibold); margin: 0 0 var(--space-2) 0; }
+.card p { font-size: var(--text-base); color: var(--text-secondary); margin: 0; line-height: var(--lh-base); }
+.card .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: var(--radius-full);
+  background: var(--primary-subtle); color: var(--primary); font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-4); font-size: var(--text-base);
+}
+
+.stat-row { display: flex; gap: var(--space-8); margin-top: var(--space-8); flex-wrap: wrap; }
+.stat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-8); box-shadow: var(--shadow-sm); min-width: 180px;
+}
+.stat .value { font-size: clamp(2.2rem, 3.6vw, 3rem); font-weight: var(--weight-semibold); line-height: 1; }
+.stat .value.good { color: var(--success); }
+.stat .value.gap { color: var(--warning); }
+.stat .label { font-size: var(--text-sm); color: var(--text-muted); margin-top: var(--space-2); }
+
+.note-box {
+  border-left: 3px solid var(--warning); background: var(--warning-bg); border-radius: var(--radius-sm);
+  padding: var(--space-4) var(--space-5); font-size: var(--text-sm); color: var(--text-secondary);
+  margin-top: var(--space-6); max-width: 42em;
+}
+.note-box.info { border-left-color: var(--info); background: var(--info-bg); }
+
+.pivot-wrap { display: flex; align-items: stretch; gap: var(--space-6); margin-top: var(--space-8); }
+.pivot-col { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-sm); }
+.pivot-col.before { opacity: 0.75; }
+.pivot-col.after { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-subtle), var(--shadow-sm); }
+.pivot-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; font-weight: var(--weight-semibold); color: var(--text-muted); margin-bottom: var(--space-3); }
+.pivot-col.after .pivot-label { color: var(--primary); }
+.pivot-arrow { display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: var(--text-muted); }
+
+.list-check { list-style: none; padding: 0; margin: var(--space-6) 0 0 0; }
+.list-check li { display: flex; gap: var(--space-3); align-items: flex-start; margin-bottom: var(--space-4); font-size: var(--text-lg); color: var(--text-secondary); }
+.list-check li::before { content: "✓"; flex-shrink: 0; color: var(--success); font-weight: var(--weight-semibold); background: var(--success-bg); width: 26px; height: 26px; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; font-size: var(--text-sm); margin-top: 2px; }
+
+.roadmap-list { list-style: none; padding: 0; margin: var(--space-6) 0 0 0; display: grid; gap: var(--space-3); }
+.roadmap-list li {
+  display: flex; gap: var(--space-4); align-items: center; font-size: var(--text-lg); color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+}
+.roadmap-list li .tag { flex-shrink:0; font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--text-muted); border: 1px solid var(--border); border-radius: var(--radius-full); padding: 2px var(--space-3); }
+
+.hazard-legend { display: flex; gap: var(--space-6); margin-top: var(--space-6); flex-wrap: wrap; }
+.hazard-item { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-base); color: var(--text-secondary); }
+.hazard-swatch { width: 14px; height: 14px; border-radius: var(--radius-full); flex-shrink: 0; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  border-radius: var(--radius-full); padding: var(--space-3) var(--space-6);
+  font-size: var(--text-base); font-weight: var(--weight-semibold); text-decoration: none;
+  cursor: pointer; border: 1px solid transparent; transition: background var(--duration-fast) var(--ease-standard), transform var(--duration-fast);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: var(--primary); color: var(--text-on-primary); }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+.btn-secondary:hover { background: var(--bg-subtle); }
+.btn-row { display: flex; gap: var(--space-4); margin-top: var(--space-8); flex-wrap: wrap; }
+
+.title-footer { position: absolute; bottom: var(--space-16); font-size: var(--text-sm); color: var(--text-muted); }
+
+/* Notes overlay */
+#notes-panel {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+  background: var(--bg-inverse); color: var(--text-inverse);
+  padding: var(--space-6) 12vw; font-size: var(--text-base); line-height: var(--lh-lg);
+  max-height: 32vh; overflow-y: auto;
+  transform: translateY(100%); transition: transform var(--duration-base) var(--ease-standard);
+  box-shadow: var(--shadow-xl);
+}
+#notes-panel.open { transform: translateY(0); }
+#notes-panel .notes-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: var(--space-2); font-weight: var(--weight-semibold); }
+
+.hint {
+  position: fixed; bottom: var(--space-6); left: var(--space-6); z-index: 55;
+  font-size: var(--text-xs); color: var(--text-muted);
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div class="deck-controls">
+  <button class="icon-btn" id="notes-toggle" aria-label="Toggle speaker notes" title="Speaker notes (N)">🗒</button>
+  <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Dark mode (D)">🌙</button>
+  <button class="icon-btn" id="fullscreen-toggle" aria-label="Toggle fullscreen" title="Fullscreen (F)">⛶</button>
+</div>
+
+<button class="nav-arrow prev" id="prev-btn" aria-label="Previous slide">‹</button>
+<button class="nav-arrow next" id="next-btn" aria-label="Next slide">›</button>
+
+<div class="deck" id="deck">
+
+  <!-- 1: Title -->
+  <section class="slide" data-notes="Set the scene: Detect x NEET hackathon, Problem 03. Business-development framing — the goal today is a demo that reads as clear value to NEET leadership, not a finished product. ~30 sec.">
+    <div class="eyebrow">Detect × NextEra Energy Transmission — Hackathon, July 21 2026</div>
+    <h1 class="display">LiDAR Coverage &amp; Hazard Intelligence for Transmission Routes</h1>
+    <p class="subtitle">Problem 03 — knowing what LiDAR already exists, and what's in the way, before committing to a new collection or a new route.</p>
+    <div class="title-footer">Problem 03 team · Detect × NEET</div>
+  </section>
+
+  <!-- 2: The problem -->
+  <section class="slide" data-notes="These three pain points are verbatim from the NEET rep in this morning's discovery session. Read the subtext line — it frames why this is expensive and time-sensitive, not just inconvenient.">
+    <div class="eyebrow">The problem, in NEET's own words</div>
+    <h1 class="h1">Duplicated collection costs money and time</h1>
+    <p class="body-text">Aerial LiDAR collection is costly, deadline-driven, and seasonal. Usable data often already exists across public and previously-acquired sources — but there's no easy way to see what's already available before committing to an expensive new flight.</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="num">1</div>
+        <h3>Duplicate collection cost</h3>
+        <p>Re-flying LiDAR that's already publicly available, because there's no visibility into existing coverage.</p>
+      </div>
+      <div class="card">
+        <div class="num">2</div>
+        <h3>Building detection</h3>
+        <p>Spotting structures near a planned route before they become a field-discovered problem.</p>
+      </div>
+      <div class="card">
+        <div class="num">3</div>
+        <h3>Planning clearance &amp; terrain</h3>
+        <p>Understanding real ground conditions — vegetation, water, elevation change — ahead of route commitment.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: The pivot -->
+  <section class="slide" data-notes="This is the story of the day, not just the build. We walked in planning a coverage catalog. The 9AM discovery session sharpened it in real time: NEET's actual ask is hazard detection along a route they've already planned. Coverage/gap detection became one input into that, not the whole deliverable. Mention explicitly what's out of scope: rerouting, chatbot, real Routify/ArcGIS integration — all noted as future ideas on the whiteboard, not oversights.">
+    <div class="eyebrow">How the ask sharpened, live</div>
+    <h1 class="h1">From a coverage catalog to a hazard report</h1>
+    <p class="body-text">The 9AM discovery session with NEET reframed the problem in real time — before we'd written the first line of the build.</p>
+    <div class="pivot-wrap">
+      <div class="pivot-col before">
+        <div class="pivot-label">Before discovery</div>
+        <h3>"Show what coverage exists"</h3>
+        <p style="color:var(--text-secondary); font-size:var(--text-base);">A coverage catalog / gap finder for a study area — useful, but generic.</p>
+      </div>
+      <div class="pivot-arrow">→</div>
+      <div class="pivot-col after">
+        <div class="pivot-label">After discovery</div>
+        <h3>Hazard detection on a real route</h3>
+        <p style="color:var(--text-secondary); font-size:var(--text-base);">Given a real route (KML + right-of-way corridor), check existing LiDAR against it and flag buildings, vegetation, water, and elevation change — and flag when the data itself is too stale or sparse to trust.</p>
+      </div>
+    </div>
+    <div class="note-box">Explicitly out of scope for today's build: reroute suggestions, a chatbot interface, and real Routify/ArcGIS integration — all whiteboarded as future ideas, by direct instruction.</div>
+  </section>
+
+  <!-- 4: The solution -->
+  <section class="slide" data-notes="Walk through what the dashboard actually does. This is the main deliverable: coverage-map.html. Real USGS 3DEP data, no mocked coverage. If the room allows, switch over to the live app now rather than describing it — the Open Live Demo button opens laz-viewer/coverage-map.html in a new tab.">
+    <div class="eyebrow">The solution</div>
+    <h1 class="h1">One dashboard: coverage and hazards, on a real route</h1>
+    <ul class="list-check">
+      <li>Real USGS 3DEP LiDAR coverage for Miami-Dade — 1,534 tiles from the 2023–24 collection, plus an older 2017 Everglades-area collection. Both real, pulled from public metadata, no API key.</li>
+      <li>Pick a route corridor → live coverage analysis, with an adjustable right-of-way width slider.</li>
+      <li>Plain-language recommendation per corridor: reuse existing data, partially collect, or fly new.</li>
+      <li>Hazard panel — buildings, vegetation, water, elevation change — clickable, pans the map to each flag.</li>
+      <li>Light and dark mode, built on the Cobalt design system.</li>
+    </ul>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="laz-viewer/coverage-map.html" target="_blank" rel="noopener">Open live demo →</a>
+      <a class="btn btn-secondary" href="laz-viewer/miami-lidar-viewer.html" target="_blank" rel="noopener">View raw point cloud (3D)</a>
+    </div>
+  </section>
+
+  <!-- 5: Real corridor deep dive -->
+  <section class="slide" data-notes="This is the strongest moment in the demo — it's NEET's own data, not a hypothetical. Say 'a route NEET provided' rather than asserting it's a live planned line, since the filename Mock_Route.kmz is unconfirmed as real vs. placeholder — ask the room to confirm. The 75ft right-of-way was parsed directly from the KML, not guessed. Walk through what 80.4% covered actually means: most of the corridor is reusable, a real chunk still needs new collection, and that's quantified.">
+    <div class="eyebrow">Real route, real numbers</div>
+    <h1 class="h1">Miami–Lauderdale Line</h1>
+    <p class="body-text">A route NEET provided partway through the build (<code style="background:var(--bg-subtle); padding:2px 6px; border-radius:4px;">Mock_Route.kmz</code>) — a genuine ArcGIS Network Analyst output, run through the exact same analysis as every other corridor.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="value good">80.4%</div><div class="label">Already covered by existing LiDAR</div></div>
+      <div class="stat"><div class="value gap">19.6%</div><div class="label">Gap — new collection needed</div></div>
+      <div class="stat"><div class="value">15</div><div class="label">Route vertices, Miami → Broward County</div></div>
+      <div class="stat"><div class="value">75 ft</div><div class="label">Right-of-way buffer, parsed from KML</div></div>
+    </div>
+    <div class="note-box info">Coverage numbers are computed against real USGS coverage data. Whether this specific route is a live planned corridor or NEET's own test file is unconfirmed — worth asking the room directly.</div>
+  </section>
+
+  <!-- 6: Hazards -->
+  <section class="slide" data-notes="Tie this back to pain points 2 and 3 from slide 2 — building detection and planning clearance/terrain. Be explicit and upfront that hazard placements shown today are mock data, interpolated along the real route geometry, not live detection output. Don't let the room think this is production-grade detection.">
+    <div class="eyebrow">Hazard detection</div>
+    <h1 class="h1">Flagging what's in the way, before it's a field surprise</h1>
+    <p class="body-text">Every flag is clickable — it pans the map to the exact location and shows a confidence level and a note. Directly answers NEET's building-detection and terrain/clearance pain points.</p>
+    <div class="hazard-legend">
+      <div class="hazard-item"><span class="hazard-swatch" style="background:var(--error);"></span>Buildings</div>
+      <div class="hazard-item"><span class="hazard-swatch" style="background:var(--success);"></span>Vegetation</div>
+      <div class="hazard-item"><span class="hazard-swatch" style="background:var(--info);"></span>Water</div>
+      <div class="hazard-item"><span class="hazard-swatch" style="background:var(--warning);"></span>Elevation change</div>
+    </div>
+    <div class="card-grid two" style="margin-top: var(--space-6);">
+      <div class="card"><h3>Report categories</h3><p>Missing data · Low resolution · Hazards — the same three buckets from the whiteboard, surfaced per corridor.</p></div>
+      <div class="card"><h3>Data quality flags</h3><p>Stale data (2-year cutoff), sparse point-cloud density, and confidence level are shown alongside every hazard — so the team knows when to trust the read.</p></div>
+    </div>
+    <div class="note-box">Hazard placements shown today are mock data, interpolated along each route's real geometry — not live detection output. Said explicitly in the demo, not implied.</div>
+  </section>
+
+  <!-- 7: Business case -->
+  <section class="slide" data-notes="This is the business-development pitch, not a technical brag. Emphasize speed (one AI-assisted build session), that the coverage data and math are real and independently verified, and that it targets NEET's #1 stated pain point directly. Land the framing line clearly: prototype of what a formalized tool could look like.">
+    <div class="eyebrow">The business case</div>
+    <h1 class="h1">Built in one AI-assisted session, on real public data</h1>
+    <ul class="list-check">
+      <li>Real USGS 3DEP coverage data — no API key, and the fetch pipeline is reusable for any county, not just Miami-Dade.</li>
+      <li>Coverage math independently verified via a separate Python/Shapely re-implementation before it went into the dashboard.</li>
+      <li>Directly targets NEET's #1 stated pain point: the cost of duplicating collection that's already public.</li>
+      <li>Illustrative cost-avoided estimates on every corridor — clearly labeled as estimates, not guarantees.</li>
+    </ul>
+    <div class="note-box info">This is a prototype of what a formalized internal tool could look like — not a finished product. The value is in how fast a real, working narrative came together against real data.</div>
+  </section>
+
+  <!-- 8: What's next -->
+  <section class="slide" data-notes="Frame this as the roadmap NEET could fund/build, not things we ran out of time for. All five items came directly off today's whiteboard. Keep this brief — 30 seconds — it's a teaser, not a pitch.">
+    <div class="eyebrow">What's next, if NEET wants it</div>
+    <h1 class="h1">From today's whiteboard to a formal build</h1>
+    <ul class="roadmap-list">
+      <li><span class="tag">Integration</span>Real Routify / ArcGIS integration — auto-pull route + offsets instead of a manual KML upload</li>
+      <li><span class="tag">Data</span>Internal / previously-acquired LiDAR archive integration, beyond public sources</li>
+      <li><span class="tag">UX</span>Chatbot interface for querying flagged hazards</li>
+      <li><span class="tag">Feature</span>Reroute suggestions around flagged hazards</li>
+      <li><span class="tag">Export</span>Export to DEM, switchable views ("Next Vision 2")</li>
+    </ul>
+  </section>
+
+  <!-- 9: Thank you -->
+  <section class="slide" data-notes="Open the floor. Good candidates for follow-up if asked: the coverage math/verification approach, the hazard model and what real detection would need, or how this could plug into Routify specifically.">
+    <div class="eyebrow">Discussion</div>
+    <h1 class="display">Let's talk.</h1>
+    <p class="subtitle">Happy to dig into the coverage math, the hazard model, or where this could plug into Routify.</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="laz-viewer/coverage-map.html" target="_blank" rel="noopener">Reopen live demo →</a>
+    </div>
+  </section>
+
+</div>
+
+<div class="dots" id="dots" role="tablist" aria-label="Slide navigation"></div>
+<div class="counter" id="counter">1 / 9</div>
+<div class="hint">← → to navigate · N notes · D dark mode · F fullscreen</div>
+
+<div id="notes-panel">
+  <div class="notes-label">Speaker notes</div>
+  <div id="notes-content"></div>
+</div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var current = 0;
+  var dotsContainer = document.getElementById('dots');
+  var counterEl = document.getElementById('counter');
+  var progressEl = document.getElementById('progress');
+  var notesContent = document.getElementById('notes-content');
+  var notesPanel = document.getElementById('notes-panel');
+
+  slides.forEach(function (slide, i) {
+    var dot = document.createElement('button');
+    dot.className = 'dot';
+    dot.setAttribute('role', 'tab');
+    dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    dot.addEventListener('click', function () { goTo(i); });
+    dotsContainer.appendChild(dot);
+  });
+  var dots = Array.prototype.slice.call(dotsContainer.children);
+
+  function render() {
+    slides.forEach(function (slide, i) {
+      slide.setAttribute('aria-current', i === current ? 'true' : 'false');
+      slide.classList.toggle('exit-left', i < current);
+    });
+    dots.forEach(function (dot, i) {
+      dot.setAttribute('aria-current', i === current ? 'true' : 'false');
+    });
+    counterEl.textContent = (current + 1) + ' / ' + slides.length;
+    progressEl.style.width = (((current + 1) / slides.length) * 100) + '%';
+    notesContent.textContent = slides[current].getAttribute('data-notes') || '(no notes for this slide)';
+    document.getElementById('prev-btn').disabled = current === 0;
+    document.getElementById('next-btn').disabled = current === slides.length - 1;
+  }
+
+  function goTo(i) {
+    if (i < 0 || i >= slides.length) return;
+    current = i;
+    render();
+  }
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  document.getElementById('next-btn').addEventListener('click', next);
+  document.getElementById('prev-btn').addEventListener('click', prev);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ':
+        e.preventDefault(); next(); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+        e.preventDefault(); prev(); break;
+      case 'Home': e.preventDefault(); goTo(0); break;
+      case 'End': e.preventDefault(); goTo(slides.length - 1); break;
+      case 'n': case 'N': toggleNotes(); break;
+      case 'd': case 'D': toggleTheme(); break;
+      case 'f': case 'F': toggleFullscreen(); break;
+    }
+  });
+
+  // Click zones on left/right thirds of the screen (avoid interactive elements)
+  document.getElementById('deck').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, .card, .btn')) return;
+    var w = window.innerWidth;
+    if (e.clientX < w * 0.15) prev();
+    else if (e.clientX > w * 0.85) next();
+  });
+
+  function toggleNotes() {
+    notesPanel.classList.toggle('open');
+  }
+  document.getElementById('notes-toggle').addEventListener('click', toggleNotes);
+
+  function toggleTheme() {
+    var root = document.documentElement;
+    var isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('theme-toggle').textContent = isDark ? '🌙' : '☀️';
+  }
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('theme-toggle').textContent = '☀️';
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function () {});
+    } else {
+      document.exitFullscreen().catch(function () {});
+    }
+  }
+  document.getElementById('fullscreen-toggle').addEventListener('click', toggleFullscreen);
+
+  render();
+})();
+</script>
+
+</body>
+</html>

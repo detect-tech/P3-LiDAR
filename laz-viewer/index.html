@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Miami LiDAR Viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cobalt-600:#004ACB; --cobalt-200:#A6C1F4;
+    --volt-500:#CEFF00;
+    --navy-900:#1C1F48; --navy-950:#10122E;
+    --bg:#0B0D1A; --bg-subtle:#12141F; --surface:#12141F; --surface-raised:#1A1D2B;
+    --text:#E9F1F7; --text-secondary:#A8AFC2; --text-muted:#7E869C;
+    --border:#272B3D; --border-strong:#3D4258; --border-focus:#79A1ED;
+    --primary:#4D7FE3; --primary-hover:#79A1ED;
+    --font-sans:'Instrument Sans','Helvetica Neue',Helvetica,Arial,sans-serif;
+    --radius-lg:16px; --radius-full:9999px;
+    --shadow-lg:0 6px 16px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--text); font-family:var(--font-sans); overflow:hidden; }
+  #canvas-wrap { position:absolute; inset:0; }
+  canvas { display:block; }
+
+  header {
+    position:absolute; top:0; left:0; right:0; z-index:10;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 16px 24px; background:linear-gradient(to bottom, rgba(11,13,26,0.9), transparent);
+    pointer-events:none;
+  }
+  header * { pointer-events:auto; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:1rem; }
+  .brand .dot { width:10px; height:10px; border-radius:50%; background:var(--volt-500); box-shadow:0 0 8px rgba(206,255,0,0.6); }
+  .badge {
+    display:inline-flex; align-items:center; gap:6px;
+    background: rgba(77,127,227,0.15); color:var(--cobalt-200);
+    border:1px solid rgba(77,127,227,0.35);
+    border-radius: var(--radius-full);
+    padding: 4px 12px; font-size:0.75rem; font-weight:500;
+  }
+
+  #panel {
+    position:absolute; top:72px; left:24px; z-index:10;
+    width: 280px;
+    background: var(--surface-raised);
+    border:1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 18px;
+    font-size:0.8125rem;
+  }
+  #panel h2 { margin:0 0 4px; font-size:1rem; font-weight:600; }
+  #panel .sub { color:var(--text-muted); margin:0 0 14px; font-size:0.75rem; }
+  .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); }
+  .row:last-child { border-bottom:none; }
+  .row .k { color:var(--text-secondary); }
+  .row .v { color:var(--text); font-weight:500; text-align:right; }
+
+  #controls {
+    position:absolute; bottom:24px; left:24px; z-index:10;
+    background: var(--surface-raised);
+    border:1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 14px 18px;
+    display:flex; gap:18px; align-items:center; flex-wrap:wrap;
+    font-size:0.8125rem;
+  }
+  .ctrl-group { display:flex; flex-direction:column; gap:4px; min-width:140px; }
+  .ctrl-group label { color:var(--text-secondary); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.04em; }
+  select, input[type=range] {
+    accent-color: var(--primary);
+  }
+  select {
+    background: var(--bg-subtle); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:6px 10px; font-family:inherit; font-size:0.8125rem;
+  }
+  select:focus-visible, button:focus-visible {
+    outline:none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border-focus);
+  }
+  button {
+    height:36px; padding:0 16px; border-radius: var(--radius-full);
+    border:1px solid var(--border-strong); background:transparent; color:var(--text);
+    font-family:inherit; font-size:0.8125rem; font-weight:500; cursor:pointer;
+    transition: background 150ms ease;
+  }
+  button:hover { background: rgba(255,255,255,0.06); }
+
+  #loading {
+    position:absolute; inset:0; z-index:20;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; background:var(--bg);
+  }
+  #loading .spinner {
+    width:32px; height:32px; border-radius:50%;
+    border:3px solid var(--border); border-top-color:var(--primary);
+    animation: spin 0.8s linear infinite;
+  }
+  #loading p { color:var(--text-secondary); font-size:0.875rem; margin:0; }
+  #loading .pct { color:var(--text); font-weight:600; font-size:1.5rem; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  #legend {
+    position:absolute; bottom:24px; right:24px; z-index:10;
+    background: var(--surface-raised);
+    border:1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 14px 18px;
+    font-size:0.75rem;
+  }
+  #legend .title { color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; font-size:0.7rem; margin-bottom:8px; }
+  #legend .bar { width:180px; height:10px; border-radius:5px; margin-bottom:4px;
+    background: linear-gradient(to right, #1F5FD6, #0E7A43, #F5C64C, #C22C1F); }
+  #legend .labels { display:flex; justify-content:space-between; color:var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p><span class="pct" id="loadPct">0%</span><br/>Loading point cloud…</p>
+</div>
+
+<div id="canvas-wrap"></div>
+
+<header>
+  <div class="brand"><span class="dot"></span> Miami LiDAR Viewer</div>
+  <span class="badge">USGS 3DEP · FL_MiamiDade_D23</span>
+</header>
+
+<div id="panel">
+  <h2>Brickell / Downtown Miami</h2>
+  <p class="sub">Tile 319351_0901 &middot; NAD83(2011) Florida East (ftUS)</p>
+  <div class="row"><span class="k">Points loaded</span><span class="v" id="statPoints">–</span></div>
+  <div class="row"><span class="k">Tile extent</span><span class="v" id="statExtent">–</span></div>
+  <div class="row"><span class="k">Elevation range</span><span class="v" id="statElev">–</span></div>
+  <div class="row"><span class="k">Collected</span><span class="v">2023–2024</span></div>
+</div>
+
+<div id="controls">
+  <div class="ctrl-group">
+    <label for="colorMode">Color by</label>
+    <select id="colorMode">
+      <option value="elevation">Elevation</option>
+      <option value="classification">Classification</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label for="pointSize">Point size</label>
+    <input type="range" id="pointSize" min="0.5" max="4" step="0.1" value="1.2" />
+  </div>
+  <button id="resetView">Reset view</button>
+</div>
+
+<div id="legend">
+  <div class="title">Elevation (low → high)</div>
+  <div class="bar"></div>
+  <div class="labels"><span id="legendMin">0 m</span><span id="legendMax">–</span></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const CLASS_COLORS = {
+  1: [0.55, 0.58, 0.66],  // unclassified - neutral gray
+  2: [0.36, 0.66, 0.35],  // ground - green
+  9: [0.0, 0.42, 0.75],   // water - blue
+  17: [0.9, 0.6, 0.1],    // bridge deck - orange
+  18: [0.76, 0.6, 0.9],   // high noise/other - purple
+  20: [0.85, 0.2, 0.15],  // reserved - red
+};
+
+function elevationColor(t) {
+  // t in [0,1] -> cobalt -> success -> warning -> error ramp
+  const stops = [
+    [0.12, 0.37, 0.84],
+    [0.05, 0.48, 0.26],
+    [0.96, 0.78, 0.30],
+    [0.76, 0.17, 0.12],
+  ];
+  const n = stops.length - 1;
+  const scaled = t * n;
+  const i = Math.min(Math.floor(scaled), n - 1);
+  const f = scaled - i;
+  const a = stops[i], b = stops[i + 1];
+  return [
+    a[0] + (b[0] - a[0]) * f,
+    a[1] + (b[1] - a[1]) * f,
+    a[2] + (b[2] - a[2]) * f,
+  ];
+}
+
+async function loadMeta() {
+  const res = await fetch('data/meta.json');
+  return res.json();
+}
+
+async function loadPoints(onProgress) {
+  const res = await fetch('data/points.bin');
+  const total = Number(res.headers.get('content-length')) || 0;
+  const reader = res.body.getReader();
+  const chunks = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total) onProgress(received / total);
+  }
+  const buf = new Uint8Array(received);
+  let offset = 0;
+  for (const c of chunks) { buf.set(c, offset); offset += c.length; }
+  return buf.buffer;
+}
+
+function parseBuffer(buffer) {
+  const dv = new DataView(buffer);
+  const n = dv.getUint32(0, true);
+  let off = 4;
+  const x = new Float32Array(buffer, off, n); off += n * 4;
+  const y = new Float32Array(buffer, off, n); off += n * 4;
+  const z = new Float32Array(buffer, off, n); off += n * 4;
+  const cls = new Uint8Array(buffer, off, n);
+  return { n, x, y, z, cls };
+}
+
+let scene, camera, renderer, controls, points, geometry;
+let pointData = null;
+let meta = null;
+
+function initScene() {
+  const wrap = document.getElementById('canvas-wrap');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0d1a);
+  scene.fog = new THREE.Fog(0x0b0d1a, 400, 2200);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  wrap.appendChild(renderer.domElement);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.screenSpacePanning = true;
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  animate();
+}
+
+function buildGeometry(mode) {
+  const { n, x, y, z, cls } = pointData;
+  const positions = new Float32Array(n * 3);
+  const colors = new Float32Array(n * 3);
+
+  const zMin = meta.boundsMeters.zMin, zMax = meta.boundsMeters.zMax;
+  const zRange = Math.max(zMax - zMin, 0.001);
+
+  for (let i = 0; i < n; i++) {
+    // swap axes: LAS z (up) -> three.js y (up); las x -> three x; las y(north) -> three -z
+    positions[i * 3 + 0] = x[i] - meta.boundsMeters.xMax / 2;
+    positions[i * 3 + 1] = z[i];
+    positions[i * 3 + 2] = -(y[i] - meta.boundsMeters.yMax / 2);
+
+    let r, g, b;
+    if (mode === 'classification') {
+      const c = CLASS_COLORS[cls[i]] || [0.55, 0.58, 0.66];
+      r = c[0]; g = c[1]; b = c[2];
+    } else {
+      const t = (z[i] - zMin) / zRange;
+      [r, g, b] = elevationColor(t);
+    }
+    colors[i * 3 + 0] = r;
+    colors[i * 3 + 1] = g;
+    colors[i * 3 + 2] = b;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeBoundingSphere();
+  return geo;
+}
+
+function setColorMode(mode) {
+  if (points) {
+    scene.remove(points);
+    geometry.dispose();
+    points.material.dispose();
+  }
+  geometry = buildGeometry(mode);
+  const material = new THREE.PointsMaterial({
+    size: parseFloat(document.getElementById('pointSize').value),
+    vertexColors: true,
+    sizeAttenuation: true,
+  });
+  points = new THREE.Points(geometry, material);
+  scene.add(points);
+}
+
+function frameCamera() {
+  const bs = geometry.boundingSphere;
+  const dist = bs.radius * 1.8;
+  camera.position.set(bs.center.x + dist * 0.6, bs.center.y + dist * 0.7, bs.center.z + dist * 0.6);
+  controls.target.copy(bs.center);
+  controls.update();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+async function main() {
+  initScene();
+  meta = await loadMeta();
+  const buffer = await loadPoints((frac) => {
+    document.getElementById('loadPct').textContent = Math.round(frac * 100) + '%';
+  });
+  pointData = parseBuffer(buffer);
+
+  document.getElementById('statPoints').textContent = pointData.n.toLocaleString();
+  document.getElementById('statExtent').textContent =
+    `${meta.boundsMeters.xMax.toFixed(0)} × ${meta.boundsMeters.yMax.toFixed(0)} m`;
+  document.getElementById('statElev').textContent =
+    `${meta.boundsMeters.zMin.toFixed(1)}–${meta.boundsMeters.zMax.toFixed(1)} m`;
+  document.getElementById('legendMax').textContent = `${meta.boundsMeters.zMax.toFixed(0)} m`;
+  document.getElementById('legendMin').textContent = `${meta.boundsMeters.zMin.toFixed(0)} m`;
+
+  setColorMode('elevation');
+  frameCamera();
+
+  document.getElementById('loading').style.display = 'none';
+
+  document.getElementById('colorMode').addEventListener('change', (e) => setColorMode(e.target.value));
+  document.getElementById('pointSize').addEventListener('input', (e) => {
+    if (points) points.material.size = parseFloat(e.target.value);
+  });
+  document.getElementById('resetView').addEventListener('click', frameCamera);
+}
+
+main().catch((err) => {
+  document.getElementById('loading').innerHTML =
+    `<p style="color:#F2988E">Failed to load point cloud.<br/>${err.message}</p>`;
+  console.error(err);
+});
+</script>
+</body>
+</html>

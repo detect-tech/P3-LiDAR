@@ -1,0 +1,104 @@
+CONTEXT
+Detect x NextEra Energy Transmission (NEET) hackathon — Tuesday, July 21.
+Goal is business development, not a finished app: showcase how AI can be used
+to iterate/build, build a relationship NEET is comfortable coming back to, and
+design a solution clear enough in business value that NEET could take it and
+formalize it internally. A working demo is a bonus, not the bar.
+9:00-10:00AM is the only window for problem discussion / knowledge sharing
+before building starts — so these questions need to be asked efficiently,
+prioritized, not run as exhaustive discovery.
+
+Problem 03: LiDAR data availability for transmission route development.
+
+---
+
+ORIGINAL NOTES (as written)
+
+Input
+- .LAZ file(s) of LiDAR — ?
+- .KML file for powerline structures? — GPS coordinates — ?
+
+Output expectations
+- Pain points?
+- Map view → what we have (coverage LiDAR)
+- Map view for powerline — ? (overlay)
+- Stats / viz — ?
+
+Questions:
+1) How do you get input LiDAR data?
+2) How do you get input powerline data?
+3) Why is it important? (format)
+4) What steps/visualizations are useful?
+5) Integration with anything you have already?
+6) What do we need to provide so you can use this info?
+   — .KML filtered (uncovered)
+
+---
+
+MUST-ASK (highest priority — ask these first, ~10-15 min)
+
+1) Can you actually share a sample KML/route file with us today, even a
+   redacted or non-sensitive one? Transmission structure locations can be
+   sensitive/critical infrastructure — if real data is off the table, we need
+   to know NOW so we build against synthetic/public data instead of stalling
+   mid-hackathon waiting on approval.
+
+2) Walk us through what happens today, step by step, when your team needs to
+   decide "do we fly new LiDAR, or is there something we can reuse?" Who makes
+   that call, and what do they look at to make it? (This is the actual
+   workflow we're replacing — the demo should map onto it directly.)
+
+3) What does a "win" look like to you, specifically? If you saw a demo at 3PM
+   that made you say "we should build this," what would be in it? (Ask this
+   explicitly — it's the difference between a cute map and something that
+   reads as business value to leadership.)
+
+4) What coordinate system / format is your structure or route data actually
+   in? (GPS lat/lon, State Plane, shapefile, KML, something else) — we've
+   already hit this ourselves: LiDAR tiles are commonly in State Plane feet,
+   not lat/lon, and silently assuming WGS84 is a real integration bug, not a
+   nitpick.
+
+5) Roughly what scale are we talking about — one proposed route, a handful,
+   or your whole transmission network? This changes whether "map view" needs
+   to be a lightweight client-side tool (what we've prototyped) or something
+   built for a much bigger dataset.
+
+IMPORTANT (ask if time allows, ~10 min)
+
+6) How often does new LiDAR get flown or new route data show up — is this a
+   one-time catalog or does it need to stay current? (Affects whether the
+   "coverage catalog" is a snapshot or a living system — a bigger scope claim
+   we shouldn't make casually in the demo.)
+
+7) What do you currently use for GIS / mapping internally (ArcGIS, something
+   in-house, etc.)? Not to integrate today, but so our demo doesn't propose
+   something that ignores an existing system they already trust.
+
+8) Roughly, what does a duplicate/unnecessary LiDAR collection cost you today
+   — in dollars, in schedule, in both? Even a rough number turns "reduces
+   duplicate collection" into a business case with real weight behind it
+   ($ and weeks saved) instead of a vague benefit.
+
+9) Who's the actual audience for this tool's output day-to-day — the same
+   people planning routes, or does it get handed up to
+   compliance/finance/leadership? Changes whether "stats/viz" should look like
+   an internal working view or something presentation-ready.
+
+10) What do you need FROM us — as an output — for this to be useful to you
+    tomorrow, not just today? (e.g. a filtered/uncovered KML export, a shareable
+    report, something else). Ask this one directly, don't assume the KML
+    export idea is what they actually want.
+
+NICE TO HAVE (only if the conversation naturally goes there)
+
+11) Are there other data sources beyond LiDAR you'd want cataloged the same
+    way (survey data, as-built drawings, imagery)?
+12) Is there a specific real (or realistic) study area/route you'd want us to
+    demo against, so the 3PM presentation lands as "our actual problem," not
+    a generic Miami-Dade example?
+
+NOTE ON DESIGN
+Keep using hackathon-design-system-reference.md (Cobalt UI) for anything we
+build — Cobalt primary for actions, pill buttons, AA-contrast status colors,
+dark/light both supported.

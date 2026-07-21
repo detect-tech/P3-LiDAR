@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>LiDAR Coverage & Route Planner — Miami-Dade</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --cobalt-600:#004ACB; --cobalt-200:#A6C1F4;
+    --volt-500:#CEFF00;
+    --navy-900:#1C1F48;
+    --bg:#FFFFFF; --bg-subtle:#F6F8FB; --surface-raised:#FFFFFF;
+    --text:#1C1F48; --text-secondary:#4D5674; --text-muted:#67718F;
+    --border:#D4DAE7; --border-strong:#B0B8CC; --border-focus:#004ACB;
+    --primary:#004ACB;
+    --success:#0E7A43; --success-bg:#DCF5E7;
+    --warning:#A16207; --warning-bg:#FBF0D4; --warning-text:#8B5A06;
+    --error:#C22C1F; --error-bg:#FBE3E0;
+    --info:#0B62B8; --info-bg:#DEEDFB;
+    --excluded:#B04B0A; --excluded-bg:#FBE9DC;
+    --link:#004ACB;
+    --font-sans:'Instrument Sans','Helvetica Neue',Helvetica,Arial,sans-serif;
+    --radius-sm:8px; --radius-lg:16px; --radius-full:9999px;
+    --shadow-lg:0 6px 16px rgba(11,13,26,0.14);
+  }
+  html.dark {
+    --bg:#0B0D1A; --bg-subtle:#12141F; --surface-raised:#1A1D2B;
+    --text:#E9F1F7; --text-secondary:#A8AFC2; --text-muted:#7E869C;
+    --border:#272B3D; --border-strong:#3D4258; --border-focus:#79A1ED;
+    --primary:#4D7FE3;
+    --success:#5BD598; --success-bg:#0B3B23;
+    --warning:#F5C64C; --warning-bg:#3E2E06; --warning-text:#F5C64C;
+    --error:#F2988E; --error-bg:#4A1610;
+    --info:#7DBCF0; --info-bg:#0A2E4E;
+    --excluded:#E8834A; --excluded-bg:#3E2408;
+    --link:#A6C1F4;
+    --shadow-lg:0 6px 16px rgba(0,0,0,0.5);
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--text); font-family:var(--font-sans); overflow:hidden; }
+  body { display:flex; flex-direction:column; }
+
+  header {
+    flex: 0 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 14px 24px; border-bottom:1px solid var(--border);
+    background: var(--surface-raised);
+    z-index: 10;
+  }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:1rem; color:var(--text); }
+  .brand .dot { width:10px; height:10px; border-radius:50%; background:var(--volt-500); box-shadow:0 0 8px rgba(206,255,0,0.6); }
+  .badge {
+    display:inline-flex; align-items:center; gap:6px;
+    background: rgba(77,127,227,0.15); color:var(--link);
+    border:1px solid rgba(77,127,227,0.35);
+    border-radius: var(--radius-full);
+    padding: 4px 12px; font-size:0.75rem; font-weight:500;
+  }
+
+  #themeToggle, #satelliteToggle {
+    display:inline-flex; align-items:center; gap:6px;
+    height:32px; padding:0 14px;
+    border-radius: var(--radius-full);
+    border:1px solid var(--border-strong);
+    background: transparent; color: var(--text);
+    font-family:inherit; font-size:0.75rem; font-weight:500;
+    cursor:pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+  }
+  #themeToggle:hover, #satelliteToggle:hover { background: var(--bg-subtle); }
+  #themeToggle:focus-visible, #satelliteToggle:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border-focus); }
+  #themeToggle .icon, #satelliteToggle .icon { font-size:0.9rem; }
+  #satelliteToggle[aria-pressed="true"] { background: rgba(77,127,227,0.14); border-color: var(--primary); color: var(--primary); }
+
+  #body { flex:1; display:flex; min-height:0; }
+  #map { flex: 1 1 auto; min-width:0; position:relative; }
+
+  #panel {
+    flex: 0 0 460px;
+    max-width: 460px;
+    overflow-y: auto;
+    background: var(--surface-raised);
+    border-left: 1px solid var(--border);
+    padding: 20px;
+    font-size: 0.8125rem;
+  }
+
+  .panel-section { margin-bottom: 22px; }
+  .panel-section:last-child { margin-bottom: 0; }
+  .section-title {
+    color:var(--text-secondary); font-size:0.7rem; text-transform:uppercase;
+    letter-spacing:0.04em; margin: 0 0 10px; font-weight:600;
+  }
+
+  /* route selector (filter row) */
+  .route-pills { display:flex; flex-direction:column; gap:8px; }
+  .route-pill {
+    display:flex; flex-direction:column; gap:2px;
+    text-align:left; width:100%;
+    border-radius: var(--radius-sm);
+    border:1px solid var(--border);
+    background: var(--bg-subtle);
+    color: var(--text);
+    padding: 10px 12px;
+    cursor:pointer;
+    font-family:inherit;
+    transition: background 150ms ease, border-color 150ms ease;
+  }
+  .route-pill:hover { border-color: var(--border-strong); }
+  .route-pill.active { background: rgba(77,127,227,0.14); border-color: var(--primary); }
+  .route-pill .name { font-weight:600; font-size:0.8125rem; }
+  .route-pill .desc { color:var(--text-muted); font-size:0.7rem; }
+  .route-pill:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); }
+
+  .slider-row { display:flex; align-items:center; gap:12px; margin-top:12px; }
+  .slider-row label { color:var(--text-secondary); font-size:0.75rem; white-space:nowrap; }
+  .slider-row input[type=range] { flex:1; accent-color: var(--primary); }
+  .slider-row .val { color:var(--text); font-weight:600; font-size:0.8125rem; min-width:60px; text-align:right; }
+
+  /* KPI grid */
+  .metric-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .metric {
+    background: var(--bg-subtle); border:1px solid var(--border);
+    border-radius: var(--radius-sm); padding:10px 12px;
+  }
+  .metric .k { color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.03em; }
+  .metric .v { color:var(--text); font-weight:600; font-size:1.2rem; margin-top:2px; font-variant-numeric: proportional-nums; }
+  .metric .note { color:var(--text-muted); font-size:0.675rem; margin-top:2px; }
+
+  .recommendation {
+    display:flex; gap:10px; align-items:flex-start;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .recommendation .icon { flex:0 0 auto; font-size:1rem; line-height:1.4; }
+  .recommendation.good { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
+  .recommendation.warn { background: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning); border-color: color-mix(in srgb, var(--warning) 35%, transparent); }
+  .recommendation.bad { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); border-color: color-mix(in srgb, var(--error) 35%, transparent); }
+
+  /* stacked composition bar */
+  .stackbar-wrap { }
+  .stackbar {
+    display:flex; height:20px; border-radius: var(--radius-full);
+    overflow:hidden; background: var(--bg-subtle); gap:2px;
+  }
+  .stackbar .seg {
+    height:100%; min-width:0;
+    transition: filter 120ms ease;
+    cursor: default;
+  }
+  .stackbar .seg:hover { filter: brightness(1.2); }
+  .stackbar .seg.fresh { background: var(--success); }
+  .stackbar .seg.flag { background: var(--warning); }
+  .stackbar .seg.excluded { background: var(--excluded); }
+  .stackbar .seg.gap { background: var(--error); }
+
+  .chart-legend { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+  .chart-legend .row { display:flex; align-items:center; gap:8px; font-size:0.75rem; }
+  .chart-legend .sw { width:10px; height:10px; border-radius:3px; flex:0 0 auto; }
+  .chart-legend .sw.fresh { background: var(--success); }
+  .chart-legend .sw.flag { background: var(--warning); }
+  .chart-legend .sw.excluded { background: var(--excluded); }
+  .chart-legend .sw.gap { background: var(--error); }
+  .chart-legend .label { color:var(--text-secondary); flex:1; }
+  .chart-legend .value { color:var(--text); font-weight:500; }
+
+  /* magnitude bar chart */
+  .barchart { position:relative; height:150px; margin-top:8px; padding-left:34px; }
+  .barchart .gridline {
+    position:absolute; left:34px; right:0; height:1px; background:var(--border);
+  }
+  .barchart .gridline .tick {
+    position:absolute; left:-34px; top:-6px; width:28px; text-align:right;
+    color:var(--text-muted); font-size:0.65rem;
+  }
+  .barchart .bars {
+    position:absolute; left:34px; right:0; top:0; bottom:0;
+    display:flex; align-items:flex-end; justify-content:space-around;
+  }
+  .barchart .col { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; flex:1; position:relative; }
+  .barchart .bar {
+    width:22px; border-radius:4px 4px 0 0;
+    transition: filter 120ms ease;
+    position:relative;
+  }
+  .barchart .bar:hover { filter: brightness(1.2); }
+  .barchart .bar.fresh { background: var(--success); }
+  .barchart .bar.flag { background: var(--warning); }
+  .barchart .bar.excluded { background: var(--excluded); }
+  .barchart .bar.gap { background: var(--error); }
+  .barchart .bar-label {
+    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    font-size:0.675rem; color:var(--text); white-space:nowrap; font-weight:500;
+  }
+  .barchart .axis-label {
+    position:absolute; bottom:-20px; left:50%; transform:translateX(-50%);
+    font-size:0.65rem; color:var(--text-muted); white-space:nowrap;
+  }
+
+  .chart-tooltip {
+    position:fixed; z-index:2000; pointer-events:none;
+    background: var(--navy-900); color:#E9F1F7;
+    border:1px solid #3D4258;
+    border-radius:8px; padding:6px 10px; font-size:0.75rem;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    display:none;
+    white-space:nowrap;
+  }
+  .chart-tooltip .v { font-weight:600; }
+
+  .table-toggle {
+    background:none; border:none; color:var(--link); font-family:inherit;
+    font-size:0.75rem; cursor:pointer; padding:0; text-decoration:underline;
+    margin-top:10px;
+  }
+  .table-toggle:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); border-radius:2px; }
+
+  .data-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:0.75rem; }
+  .data-table th, .data-table td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border); }
+  .data-table th { color:var(--text-muted); font-weight:500; text-transform:uppercase; font-size:0.65rem; letter-spacing:0.03em; }
+  .data-table td { color:var(--text); }
+  .data-table td.num { font-variant-numeric: tabular-nums; text-align:right; }
+
+  .tile-list { max-height: 170px; overflow-y:auto; border:1px solid var(--border); border-radius: var(--radius-sm); margin-top:8px; }
+  .tile-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--border); font-size:0.75rem; }
+  .tile-row:last-child { border-bottom:none; }
+  .tile-row a { color: var(--link); text-decoration:none; flex:0 0 auto; }
+  .tile-row a:hover { text-decoration:underline; }
+  .tile-row .name { color:var(--text-secondary); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tile-tag { font-size:0.65rem; padding:2px 6px; border-radius:4px; font-weight:600; flex:0 0 auto; }
+  .tile-tag.fresh { background: color-mix(in srgb, var(--success) 18%, var(--bg-subtle)); color:var(--success); }
+  .tile-tag.stale { background: color-mix(in srgb, var(--warning) 18%, var(--bg-subtle)); color:var(--warning-text); }
+
+  /* hazards */
+  .hazard-legend { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+  .hazard-legend .row { display:flex; align-items:center; gap:6px; font-size:0.7rem; color:var(--text-secondary); }
+  .hazard-legend .sw { width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
+
+  .hazard-list { max-height: 280px; overflow-y:auto; border:1px solid var(--border); border-radius: var(--radius-sm); }
+  .hazard-row {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:9px 10px; border-bottom:1px solid var(--border);
+    font-size:0.75rem; cursor:pointer; background:none; width:100%;
+    text-align:left; font-family:inherit; color:inherit;
+    transition: background 120ms ease, opacity 120ms ease;
+    border-left: 3px solid transparent;
+  }
+  .hazard-row:last-child { border-bottom:none; }
+  .hazard-row:hover, .hazard-row:focus-visible { background: var(--bg-subtle); }
+  .hazard-row:focus-visible { outline:none; box-shadow: inset 0 0 0 2px var(--border-focus); }
+  .hazard-row.status-accepted { border-left-color: var(--success); }
+  .hazard-row.status-denied { opacity: 0.55; }
+  .hazard-row .dot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; margin-top:3px; }
+  .hazard-row .body { flex:1; min-width:0; }
+  .hazard-row .top { display:flex; justify-content:space-between; gap:8px; }
+  .hazard-row .type { font-weight:600; color:var(--text); }
+  .hazard-row .conf { font-size:0.65rem; padding:1px 6px; border-radius:4px; flex:0 0 auto; font-weight:600; text-transform:capitalize; }
+  .hazard-row .conf.high { background: color-mix(in srgb, var(--error) 18%, var(--bg-subtle)); color:var(--error); }
+  .hazard-row .conf.medium { background: color-mix(in srgb, var(--warning) 18%, var(--bg-subtle)); color:var(--warning-text); }
+  .hazard-row .conf.low { background: var(--bg-subtle); color:var(--text-muted); border:1px solid var(--border); }
+  .hazard-row .note { color:var(--text-muted); margin-top:2px; }
+  .hazard-row .actions { display:flex; align-items:center; gap:6px; margin-top:7px; }
+  .hazard-action {
+    font-size:0.65rem; font-weight:600; padding:3px 9px; border-radius: var(--radius-full);
+    border:1px solid var(--border-strong); background:var(--bg-subtle); color:var(--text-secondary);
+    cursor:pointer; font-family:inherit; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .hazard-action:hover { background: var(--border); }
+  .hazard-action:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); }
+  .hazard-action.accept.active { background: color-mix(in srgb, var(--success) 20%, var(--bg-subtle)); border-color: var(--success); color: var(--success); }
+  .hazard-action.deny.active { background: color-mix(in srgb, var(--error) 20%, var(--bg-subtle)); border-color: var(--error); color: var(--error); }
+  .hazard-status-summary { font-size:0.7rem; color:var(--text-muted); margin-left:auto; }
+
+  .hazard-marker { border-radius:50%; border:2px solid rgba(255,255,255,0.9); box-shadow:0 1px 4px rgba(0,0,0,0.35); }
+
+  /* map overlays */
+  .map-legend {
+    position:absolute; top:16px; right:16px; z-index:1000;
+    background: var(--surface-raised); border:1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    padding: 14px 16px; font-size:0.75rem; width:240px;
+  }
+  .map-legend .title { color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; font-size:0.68rem; margin-bottom:8px; font-weight:600; }
+  .map-legend .legend-hint { text-transform:none; letter-spacing:0; font-weight:400; color:var(--text-muted); }
+  .map-legend .row { display:flex; align-items:center; gap:8px; padding:4px 0; }
+  .map-legend .toggle-row { cursor:pointer; }
+  .map-legend .toggle-row input[type=checkbox] { margin:0; accent-color: var(--primary); cursor:pointer; flex:0 0 auto; }
+  .map-legend .sw { width:12px; height:12px; border-radius:3px; flex:0 0 auto; }
+  .map-legend .lbl { color:var(--text-secondary); flex:1; }
+  .map-legend .cnt { color:var(--text-muted); }
+
+  .leaflet-popup-content-wrapper { background: var(--surface-raised); color:var(--text); border-radius: 12px; border:1px solid var(--border); }
+  .leaflet-popup-tip { background: var(--surface-raised); }
+  .leaflet-popup-content { font-family: var(--font-sans); font-size:0.8125rem; margin:12px 14px; }
+  .popup-title { font-weight:600; margin-bottom:6px; color:var(--text); }
+  .popup-row { display:flex; justify-content:space-between; gap:12px; padding:2px 0; color:var(--text-secondary); }
+  .popup-row b { color:var(--text); font-weight:500; }
+  .popup-link { display:inline-block; margin-top:8px; color:var(--link); text-decoration:underline; font-size:0.75rem; }
+  .leaflet-control-attribution { background: rgba(11,13,26,0.8) !important; color:var(--text-muted) !important; }
+  .leaflet-control-attribution a { color:var(--text-secondary) !important; }
+  .leaflet-control-zoom a { background: var(--surface-raised) !important; color:var(--text) !important; border-color: var(--border) !important; }
+
+  /* scrollbar polish for panel */
+  #panel::-webkit-scrollbar, .tile-list::-webkit-scrollbar { width:8px; }
+  #panel::-webkit-scrollbar-thumb, .tile-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="dot"></span> LiDAR Coverage &amp; Route Planner</div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <span class="badge">Problem 03 · Transmission route planning</span>
+    <button id="satelliteToggle" aria-pressed="false" aria-label="Switch to satellite imagery" title="Switch to satellite imagery">
+      <span class="icon" aria-hidden="true">🛰</span><span class="label">Satellite</span>
+    </button>
+    <button id="themeToggle" aria-pressed="true" aria-label="Switch to light map view" title="Switch to light map view">
+      <span class="icon" aria-hidden="true">☀</span><span class="label">Light view</span>
+    </button>
+  </div>
+</header>
+
+<div id="body">
+  <div id="map">
+    <div class="map-legend">
+      <div class="title">Coverage layers <span class="legend-hint">(toggle to compare)</span></div>
+      <label class="row toggle-row">
+        <input type="checkbox" id="layerToggleUsgs2024" checked>
+        <span class="sw" style="background:#4D7FE3"></span><span class="lbl">USGS 3DEP 2023–24</span><span class="cnt" id="countUsgs">–</span>
+      </label>
+      <label class="row toggle-row">
+        <input type="checkbox" id="layerToggleUsgs2017" checked>
+        <span class="sw" style="background:#F5C64C"></span><span class="lbl">USGS 3DEP 2017</span><span class="cnt" id="countEverglades">–</span>
+      </label>
+      <div class="row"><span class="sw" style="background:#7DBCF0"></span><span class="lbl">Study corridor</span><span class="cnt"></span></div>
+      <div class="row"><span class="sw" style="background:#E8834A"></span><span class="lbl">Stale (≥2yr) — needs refresh</span><span class="cnt"></span></div>
+      <div class="row"><span class="sw" style="background:#F2988E"></span><span class="lbl">Gap — no data</span><span class="cnt"></span></div>
+    </div>
+  </div>
+
+  <div id="panel">
+
+    <div class="panel-section">
+      <div class="section-title">Study corridor</div>
+      <div class="route-pills" id="routePills"></div>
+      <div class="slider-row">
+        <label for="bufferSlider">Corridor width</label>
+        <input type="range" id="bufferSlider" min="50" max="2500" step="25" value="500" />
+        <span class="val" id="bufferVal">500 ft</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="recommendation good" id="recommendation"><span class="icon">–</span><span class="text">–</span></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title" style="display:flex;">Hazards flagged along corridor<span class="hazard-status-summary" id="hazardStatusSummary"></span></div>
+      <div class="hazard-legend" id="hazardLegend"></div>
+      <div class="hazard-list" id="hazardList"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Corridor summary</div>
+      <div class="metric-grid">
+        <div class="metric"><div class="k">Route length</div><div class="v" id="mLength">–</div></div>
+        <div class="metric"><div class="k">Corridor area</div><div class="v" id="mArea">–</div></div>
+        <div class="metric"><div class="k">Already covered</div><div class="v" id="mCovered">–</div></div>
+        <div class="metric"><div class="k">Collection gap</div><div class="v" id="mGap">–</div></div>
+        <div class="metric"><div class="k">Reusable tiles</div><div class="v" id="mTiles">–</div></div>
+        <div class="metric"><div class="k">Est. cost avoided</div><div class="v" id="mCostAvoided">–</div><div class="note">@ $850/km² typical LiDAR acquisition</div></div>
+        <div class="metric"><div class="k">Est. new collection cost</div><div class="v" id="mCostGap">–</div><div class="note">for the uncovered portion only</div></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Coverage composition</div>
+      <div class="stackbar-wrap">
+        <div class="stackbar" id="stackbar"></div>
+        <div class="chart-legend" id="stackLegend"></div>
+      </div>
+    </div>
+
+    <div class="panel-section" id="magnitudeSection">
+      <div class="section-title">Coverage by category (km²)</div>
+      <div class="barchart" id="barchart">
+        <div class="bars" id="barchartBars"></div>
+      </div>
+      <button class="table-toggle" id="tableToggle">View as table</button>
+      <table class="data-table" id="dataTable" style="display:none">
+        <thead><tr><th>Category</th><th>Area</th><th>Share</th></tr></thead>
+        <tbody id="dataTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Reusable existing tiles</div>
+      <div class="tile-list" id="tileList"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="chart-tooltip" id="chartTooltip"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script>
+const COST_PER_KM2 = 850; // illustrative estimate only, not a real quote
+
+const SAMPLE_ROUTES = [
+  {
+    id: 'miami-lauderdale',
+    name: 'Miami–Lauderdale Line',
+    desc: 'Provided route (KML) — real ArcGIS-planned corridor, 75ft buffer',
+    coords: [[-80.457728,25.662718], [-80.466828,25.666766], [-80.47821,25.676482], [-80.481084,25.702387], [-80.481443,25.73921], [-80.477924,25.762674], [-80.448744,25.81808], [-80.452809,25.925985], [-80.442709,25.938507], [-80.446011,26.059231], [-80.446011,26.059388], [-80.446011,26.059618], [-80.442456,26.06508], [-80.432575,26.071869], [-80.410117,26.076967]],
+    bufferFt: 75,
+  },
+  {
+    id: 'urban-core',
+    name: 'Urban core corridor (sample)',
+    desc: 'Brickell to North Miami — dense downtown flight path',
+    coords: [[-80.1918,25.7617], [-80.1930,25.8200], [-80.1800,25.9000]],
+    bufferFt: 500,
+  },
+  {
+    id: 'southwest-duplicate',
+    name: 'Southwest corridor (sample)',
+    desc: 'Crosses a historical 2017 survey zone',
+    coords: [[-80.1918,25.7617], [-80.40,25.60], [-80.60,25.48], [-80.78,25.32]],
+    bufferFt: 700,
+  },
+  {
+    id: 'long-haul-gap',
+    name: 'Long-haul corridor (sample)',
+    desc: 'Extends toward the Everglades interior, past cataloged extent',
+    coords: [[-80.1300,25.9500], [-80.4500,25.7200], [-80.8300,25.5000], [-81.0500,25.4000]],
+    bufferFt: 900,
+  },
+  {
+    id: 'northern-partial',
+    name: 'Northern extension corridor (sample)',
+    desc: 'Crosses into Broward County — roughly half outside cataloged coverage',
+    coords: [[-80.15,25.65], [-80.17,25.85], [-80.19,26.00], [-80.21,26.12]],
+    bufferFt: 500,
+  },
+];
+
+// Mock hazard data — placeholder for the real hazard-detection pipeline (buildings,
+// vegetation, water, elevation change flagged against LiDAR near a planned route).
+// Points are interpolated along each route's real line geometry (not arbitrary),
+// so they sit at plausible positions relative to the corridor.
+const HAZARD_TYPES = {
+  building:   { label: 'Building',            color: '#7C5CFC' },
+  vegetation: { label: 'Vegetation',          color: '#84812A' },
+  water:      { label: 'Water',               color: '#0E9488' },
+  elevation:  { label: 'Elevation change',    color: '#C2540C' },
+};
+
+const HAZARDS_BY_ROUTE = {
+  'miami-lauderdale': [
+    { id: 'H018', type: 'building',   confidence: 'high',   lat: 25.688338, lon: -80.479726, note: 'Structure near corridor start, 2023 LiDAR' },
+    { id: 'H019', type: 'vegetation', confidence: 'medium', lat: 25.778111, lon: -80.469629, note: 'Canopy overhang, 2023 LiDAR' },
+    { id: 'H020', type: 'water',      confidence: 'medium', lat: 25.860512, lon: -80.450642, note: 'Canal crossing, 2023 LiDAR' },
+    { id: 'H021', type: 'elevation',  confidence: 'low',    lat: 25.932397, lon: -80.447637, note: 'Grade change near uncataloged edge' },
+    { id: 'H022', type: 'building',   confidence: 'medium', lat: 26.018209, lon: -80.444639, note: 'Outbuilding near corridor edge, Broward County' },
+    { id: 'H023', type: 'elevation',  confidence: 'low',    lat: 26.071993, lon: -80.432690, note: 'Uncataloged area near route end' },
+  ],
+  'urban-core': [
+    { id: 'H001', type: 'building',   confidence: 'high',   lat: 25.782597, lon: -80.192380, note: 'Rooftop structure within corridor, 2023 LiDAR' },
+    { id: 'H002', type: 'vegetation', confidence: 'medium', lat: 25.820159, lon: -80.192571, note: 'Canopy overhang, 2023 LiDAR' },
+    { id: 'H003', type: 'elevation',  confidence: 'high',   lat: 25.855989, lon: -80.187202, note: 'Grade change > 3m over 50m span' },
+    { id: 'H004', type: 'building',   confidence: 'low',    lat: 25.879453, lon: -80.183944, note: 'Possible structure, low point density area' },
+  ],
+  'southwest-duplicate': [
+    { id: 'H005', type: 'building',   confidence: 'high',   lat: 25.716309, lon: -80.249939, note: 'Residential structure, 2023 LiDAR' },
+    { id: 'H006', type: 'water',      confidence: 'medium', lat: 25.603898, lon: -80.396204, note: 'Canal crossing, 2017 LiDAR only' },
+    { id: 'H007', type: 'vegetation', confidence: 'medium', lat: 25.526653, lon: -80.521705, note: 'Dense vegetation, 2017 LiDAR only' },
+    { id: 'H008', type: 'building',   confidence: 'medium', lat: 25.457394, lon: -80.625787, note: 'Outbuilding near corridor edge' },
+    { id: 'H009', type: 'elevation',  confidence: 'low',    lat: 25.368942, lon: -80.724798, note: 'Minor grade change, low confidence (stale data)' },
+  ],
+  'long-haul-gap': [
+    { id: 'H010', type: 'building',   confidence: 'high',   lat: 25.824355, lon: -80.304410, note: 'Structure cluster, 2023 LiDAR' },
+    { id: 'H011', type: 'water',      confidence: 'medium', lat: 25.675579, lon: -80.527836, note: 'Wetland/canal edge, 2017 LiDAR' },
+    { id: 'H012', type: 'vegetation', confidence: 'low',    lat: 25.567092, lon: -80.713374, note: 'Dense canopy, stale data (2017)' },
+    { id: 'H013', type: 'elevation',  confidence: 'low',    lat: 25.453372, lon: -80.932581, note: 'Uncataloged area — no elevation data to assess' },
+  ],
+  'northern-partial': [
+    { id: 'H014', type: 'building',   confidence: 'high',   lat: 25.706579, lon: -80.155838, note: 'Structure near corridor, 2023 LiDAR' },
+    { id: 'H015', type: 'vegetation', confidence: 'medium', lat: 25.838678, lon: -80.168567, note: 'Tree line, 2023 LiDAR' },
+    { id: 'H016', type: 'elevation',  confidence: 'low',    lat: 25.942002, lon: -80.182719, note: 'Uncataloged area — no elevation data to assess' },
+    { id: 'H017', type: 'building',   confidence: 'low',    lat: 26.026516, lon: -80.194268, note: 'Possible structure, uncataloged area' },
+  ],
+};
+
+let activeRouteId = SAMPLE_ROUTES[0].id;
+
+const map = L.map('map', { zoomControl: true, attributionControl: true })
+  .setView([25.65, -80.45], 9.5);
+
+const TILE_URLS = {
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+};
+
+const baseLayer = L.tileLayer(TILE_URLS.dark, {
+  attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19,
+}).addTo(map);
+
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics',
+  maxZoom: 19,
+});
+
+function setSatellite(on) {
+  const btn = document.getElementById('satelliteToggle');
+  if (on) {
+    if (map.hasLayer(baseLayer)) map.removeLayer(baseLayer);
+    if (!map.hasLayer(satelliteLayer)) satelliteLayer.addTo(map);
+    btn.setAttribute('aria-pressed', 'true');
+    btn.querySelector('.label').textContent = 'Map view';
+  } else {
+    if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
+    if (!map.hasLayer(baseLayer)) baseLayer.addTo(map);
+    btn.setAttribute('aria-pressed', 'false');
+    btn.querySelector('.label').textContent = 'Satellite';
+  }
+}
+
+document.getElementById('satelliteToggle').addEventListener('click', () => {
+  const isOn = document.getElementById('satelliteToggle').getAttribute('aria-pressed') === 'true';
+  setSatellite(!isOn);
+});
+
+function applyTheme(theme) {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+  baseLayer.setUrl(TILE_URLS[theme]);
+  const btn = document.getElementById('themeToggle');
+  const icon = btn.querySelector('.icon');
+  const label = btn.querySelector('.label');
+  if (theme === 'dark') {
+    icon.textContent = '☀'; label.textContent = 'Light view';
+    btn.setAttribute('aria-pressed', 'true');
+    btn.setAttribute('aria-label', 'Switch to light map view');
+    btn.title = 'Switch to light map view';
+  } else {
+    icon.textContent = '☾'; label.textContent = 'Dark view';
+    btn.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-label', 'Switch to dark map view');
+    btn.title = 'Switch to dark map view';
+  }
+  try { localStorage.setItem('lidar-coverage-theme', theme); } catch (e) {}
+}
+
+(function initTheme() {
+  let saved = 'light';
+  try { saved = localStorage.getItem('lidar-coverage-theme') || 'light'; } catch (e) {}
+  applyTheme(saved);
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    applyTheme(isDark ? 'light' : 'dark');
+  });
+})();
+
+function loadJSON(url) { return fetch(url).then(r => r.json()); }
+function styleUsgs() { return { color: '#4D7FE3', weight: 1, fillColor: '#4D7FE3', fillOpacity: 0.15 }; }
+function styleEverglades() { return { color: '#F5C64C', weight: 1.5, fillColor: '#F5C64C', fillOpacity: 0.10, dashArray: '4 3' }; }
+function styleStudy() { return { color: '#7DBCF0', weight: 2, fillColor: '#7DBCF0', fillOpacity: 0.06, dashArray: '6 4' }; }
+function styleGap() { return { color: '#F2988E', weight: 1, fillColor: '#F2988E', fillOpacity: 0.45 }; }
+function styleExcluded() { return { color: '#E8834A', weight: 1, fillColor: '#E8834A', fillOpacity: 0.35, dashArray: '3 3' }; }
+
+// Real capture dates per dataset (parsed from USGS FGDC metadata <rngdates><enddate>, not guessed) —
+// used to pick the authoritative ("latest wins") source per area and bucket it by age.
+const DATASETS = [
+  { key: 'usgs2024', label: 'USGS 3DEP 2023–24', captureDate: '2024-05-29', color: '#4D7FE3' },
+  { key: 'usgs2017', label: 'USGS 3DEP 2017', captureDate: '2017-07-01', color: '#F5C64C' },
+]; // ordered newest-first — "latest wins" is just "first dataset in this list that covers a given spot"
+
+function ageYears(dateStr) {
+  const then = new Date(dateStr);
+  return (Date.now() - then.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+}
+function ageBucket(years) {
+  if (years < 1) return 'fresh';
+  if (years < 2) return 'flag';
+  return 'excluded';
+}
+const AGE_BUCKET_LABEL = { fresh: 'Fresh (< 1 yr)', flag: 'Aging (1–2 yr)', excluded: 'Stale (≥ 2 yr)' };
+
+function fmtDate(d) {
+  if (!d || d.length !== 8) return d || 'Unknown';
+  return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+}
+function fmtKm2(v) { return `${v < 0.01 ? v.toFixed(3) : v.toFixed(2)} km²`; }
+function fmtUsd(v) {
+  if (v >= 1000) return `$${(v/1000).toFixed(1)}K`;
+  return `$${Math.round(v)}`;
+}
+function roundNice(v) {
+  if (v <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const norm = v / mag;
+  let nice;
+  if (norm <= 1) nice = 1; else if (norm <= 2) nice = 2; else if (norm <= 5) nice = 5; else nice = 10;
+  return nice * mag;
+}
+
+let usgsData, evergladesData;
+let routeResultLayer = L.layerGroup().addTo(map);
+let hazardLayerGroup = L.layerGroup().addTo(map);
+let overlapLayerGroup;
+const hazardMarkersById = {};
+
+let hazardStatus = {};
+try { hazardStatus = JSON.parse(localStorage.getItem('lidar-hazard-status') || '{}'); } catch (e) {}
+function saveHazardStatus() {
+  try { localStorage.setItem('lidar-hazard-status', JSON.stringify(hazardStatus)); } catch (e) {}
+}
+function setHazardStatus(id, status) {
+  hazardStatus[id] = hazardStatus[id] === status ? null : status;
+  if (!hazardStatus[id]) delete hazardStatus[id];
+  saveHazardStatus();
+  renderHazards(activeRouteId);
+}
+
+const tooltip = document.getElementById('chartTooltip');
+function showTooltip(evt, html) {
+  tooltip.innerHTML = html;
+  tooltip.style.display = 'block';
+  tooltip.style.left = (evt.clientX + 14) + 'px';
+  tooltip.style.top = (evt.clientY + 14) + 'px';
+}
+function hideTooltip() { tooltip.style.display = 'none'; }
+
+function renderRoutePills() {
+  const wrap = document.getElementById('routePills');
+  wrap.innerHTML = '';
+  SAMPLE_ROUTES.forEach(r => {
+    const btn = document.createElement('button');
+    btn.className = 'route-pill' + (r.id === activeRouteId ? ' active' : '');
+    btn.innerHTML = `<span class="name"></span><span class="desc"></span>`;
+    btn.querySelector('.name').textContent = r.name;
+    btn.querySelector('.desc').textContent = r.desc;
+    btn.addEventListener('click', () => {
+      activeRouteId = r.id;
+      document.getElementById('bufferSlider').value = r.bufferFt;
+      document.getElementById('bufferVal').textContent = `${r.bufferFt} ft`;
+      renderRoutePills();
+      analyzeActiveRoute();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+document.getElementById('bufferSlider').addEventListener('input', (e) => {
+  document.getElementById('bufferVal').textContent = `${e.target.value} ft`;
+  analyzeActiveRoute();
+});
+
+document.getElementById('tableToggle').addEventListener('click', () => {
+  const chart = document.getElementById('barchart');
+  const table = document.getElementById('dataTable');
+  const showingTable = table.style.display !== 'none';
+  table.style.display = showingTable ? 'none' : 'block';
+  chart.style.display = showingTable ? 'block' : 'none';
+  document.getElementById('tableToggle').textContent = showingTable ? 'View as table' : 'View as chart';
+});
+
+function analyzeActiveRoute() {
+  const route = SAMPLE_ROUTES.find(r => r.id === activeRouteId);
+  const line = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: route.coords } };
+  const widthFt = parseFloat(document.getElementById('bufferSlider').value);
+  const widthKm = (widthFt / 2) * 0.0003048;
+  const studyPolygon = turf.buffer(line, widthKm, { units: 'kilometers' });
+
+  routeResultLayer.clearLayers();
+  L.geoJSON(studyPolygon, { style: styleStudy }).addTo(routeResultLayer);
+  map.fitBounds(L.geoJSON(studyPolygon).getBounds(), { padding: [40, 40] });
+
+  renderHazards(route.id);
+
+  const routeLengthMiles = turf.length(line, { units: 'miles' });
+  const studyAreaKm2 = turf.area(studyPolygon) / 1e6;
+
+  // per dataset: which tiles intersect, and their unioned clip against the study polygon
+  const datasetHits = DATASETS.map(ds => {
+    const source = ds.key === 'usgs2024' ? usgsData : evergladesData;
+    const hits = source.features.filter(f => {
+      try { return turf.booleanIntersects(f, studyPolygon); } catch (e) { return false; }
+    });
+    let union = null;
+    hits.forEach(f => {
+      try {
+        const c = turf.intersect(f, studyPolygon);
+        if (c) union = union ? turf.union(union, c) : c;
+      } catch (e) {}
+    });
+    return { ds, hits, clip: union };
+  });
+
+  // "flown twice" insight — raw overlap between full per-dataset clips, independent of which one wins
+  let duplicateGeom = null;
+  if (datasetHits[0].clip && datasetHits[1].clip) {
+    try { duplicateGeom = turf.intersect(datasetHits[0].clip, datasetHits[1].clip); } catch (e) { duplicateGeom = null; }
+  }
+
+  // latest-wins: walk datasets newest-first; each claims whatever part of the still-unclaimed
+  // area it covers, then buckets that claim by ITS OWN age (not the age of whatever else also covers it)
+  let remaining = studyPolygon;
+  const bucketGeom = { fresh: null, flag: null, excluded: null };
+  datasetHits.forEach(({ ds, clip }) => {
+    if (!remaining || !clip) return;
+    let claimed = null;
+    try { claimed = turf.intersect(remaining, clip); } catch (e) { claimed = null; }
+    if (!claimed) return;
+    const bucket = ageBucket(ageYears(ds.captureDate));
+    bucketGeom[bucket] = bucketGeom[bucket] ? turf.union(bucketGeom[bucket], claimed) : claimed;
+    try { remaining = turf.difference(remaining, claimed); } catch (e) { remaining = null; }
+  });
+  const gapGeom = remaining;
+
+  const areaOf = (g) => g ? turf.area(g) / 1e6 : 0;
+  const freshKm2 = areaOf(bucketGeom.fresh);
+  const flagKm2 = areaOf(bucketGeom.flag);
+  const excludedKm2 = areaOf(bucketGeom.excluded);
+  let gapKm2 = areaOf(gapGeom);
+  // clamp tiny negative/rounding drift from successive turf boolean ops
+  gapKm2 = Math.max(gapKm2, Math.max(0, studyAreaKm2 - freshKm2 - flagKm2 - excludedKm2));
+  const duplicateKm2 = areaOf(duplicateGeom);
+
+  if (bucketGeom.excluded) L.geoJSON(bucketGeom.excluded, { style: styleExcluded }).addTo(routeResultLayer);
+  if (gapGeom) L.geoJSON(gapGeom, { style: styleGap }).addTo(routeResultLayer);
+
+  // "already covered" = any existing data, regardless of age — avoids re-flying from scratch.
+  // Age (fresh/aging/stale) is a separate, secondary signal surfaced in the recommendation note
+  // and the composition breakdown, not a hard override of the top-line coverage number.
+  const coveredKm2 = freshKm2 + flagKm2 + excludedKm2;
+  const needsCollectionKm2 = gapKm2;
+  const coveredPct = studyAreaKm2 > 0 ? (coveredKm2 / studyAreaKm2) * 100 : 0;
+  const tileCount = datasetHits[0].hits.length + datasetHits[1].hits.length;
+
+  renderKPIs({ routeLengthMiles, studyAreaKm2, coveredPct, needsCollectionKm2, tileCount, coveredKm2 });
+  renderRecommendation({ coveredPct, needsCollectionKm2, excludedKm2, duplicateKm2, tileCount });
+  renderComposition({ freshKm2, flagKm2, excludedKm2, gapKm2, studyAreaKm2 });
+  renderTileList(datasetHits[0].hits, datasetHits[1].hits);
+}
+
+function renderKPIs({ routeLengthMiles, studyAreaKm2, coveredPct, needsCollectionKm2, tileCount, coveredKm2 }) {
+  document.getElementById('mLength').textContent = `${routeLengthMiles < 10 ? routeLengthMiles.toFixed(1) : routeLengthMiles.toFixed(0)} mi`;
+  document.getElementById('mArea').textContent = fmtKm2(studyAreaKm2);
+  document.getElementById('mCovered').textContent = `${coveredPct.toFixed(0)}%`;
+  document.getElementById('mGap').textContent = fmtKm2(needsCollectionKm2);
+  document.getElementById('mTiles').textContent = tileCount.toLocaleString();
+  document.getElementById('mCostAvoided').textContent = fmtUsd(coveredKm2 * COST_PER_KM2);
+  document.getElementById('mCostGap').textContent = fmtUsd(needsCollectionKm2 * COST_PER_KM2);
+}
+
+function renderRecommendation({ coveredPct, needsCollectionKm2, excludedKm2, duplicateKm2, tileCount }) {
+  const rec = document.getElementById('recommendation');
+  const icon = rec.querySelector('.icon');
+  const text = rec.querySelector('.text');
+  let cls, iconChar, msg;
+  if (coveredPct >= 80) {
+    cls = 'good'; iconChar = '✓';
+    msg = `${coveredPct.toFixed(0)}% of this corridor already has cataloged LiDAR. Reuse the ${tileCount} listed tiles and plan new collection for the remaining ${fmtKm2(needsCollectionKm2)}.`;
+  } else if (coveredPct >= 30) {
+    cls = 'warn'; iconChar = '!';
+    msg = `Partial coverage (${coveredPct.toFixed(0)}%). Reusable data exists for part of the route, but ${fmtKm2(needsCollectionKm2)} has no cataloged data and needs new collection.`;
+  } else {
+    cls = 'bad'; iconChar = '×';
+    msg = `Only ${coveredPct.toFixed(0)}% has cataloged LiDAR. This corridor mostly lacks existing data — plan for a collection effort (${fmtKm2(needsCollectionKm2)}).`;
+  }
+  if (excludedKm2 > 0.01) {
+    msg += ` Check freshness before relying on it: ${fmtKm2(excludedKm2)} of that coverage is 2+ years old and should be treated as needing a refresh, not a straight reuse.`;
+  }
+  if (duplicateKm2 > 0.01) {
+    msg += ` Also: ${fmtKm2(duplicateKm2)} was flown by both the 2017 and 2023–24 collections (the newer one is used here) — a duplicate-collection pattern worth flagging for future planning.`;
+  }
+  rec.className = `recommendation ${cls}`;
+  icon.textContent = iconChar;
+  text.textContent = msg;
+}
+
+const CATEGORIES = [
+  { key: 'fresh', label: 'Fresh (< 1 yr)', cls: 'fresh' },
+  { key: 'flag', label: 'Aging (1–2 yr) — review', cls: 'flag' },
+  { key: 'excluded', label: 'Stale (≥ 2 yr) — needs refresh', cls: 'excluded' },
+  { key: 'gap', label: 'Gap — no data', cls: 'gap' },
+];
+
+function renderComposition({ freshKm2, flagKm2, excludedKm2, gapKm2, studyAreaKm2 }) {
+  const values = { fresh: freshKm2, flag: flagKm2, excluded: excludedKm2, gap: gapKm2 };
+  const total = studyAreaKm2 || 1;
+
+  // stacked bar
+  const stackbar = document.getElementById('stackbar');
+  stackbar.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const pct = (values[cat.key] / total) * 100;
+    if (pct <= 0.05) return;
+    const seg = document.createElement('div');
+    seg.className = `seg ${cat.cls}`;
+    seg.style.width = pct + '%';
+    seg.addEventListener('pointermove', (e) => showTooltip(e, `<span class="v">${fmtKm2(values[cat.key])}</span> · ${cat.label} (${pct.toFixed(1)}%)`));
+    seg.addEventListener('pointerleave', hideTooltip);
+    stackbar.appendChild(seg);
+  });
+
+  // legend with direct values
+  const legend = document.getElementById('stackLegend');
+  legend.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const pct = (values[cat.key] / total) * 100;
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<span class="sw ${cat.cls}"></span><span class="label"></span><span class="value"></span>`;
+    row.querySelector('.label').textContent = cat.label;
+    row.querySelector('.value').textContent = `${fmtKm2(values[cat.key])} · ${pct.toFixed(1)}%`;
+    legend.appendChild(row);
+  });
+
+  // magnitude bar chart
+  const maxVal = Math.max(...Object.values(values), 0.001);
+  const niceMax = roundNice(maxVal);
+  const barsWrap = document.getElementById('barchartBars');
+  const chartEl = document.getElementById('barchart');
+  chartEl.querySelectorAll('.gridline').forEach(el => el.remove());
+  [0.5, 1].forEach(frac => {
+    const gl = document.createElement('div');
+    gl.className = 'gridline';
+    gl.style.bottom = (frac * 100) + '%';
+    gl.innerHTML = `<span class="tick"></span>`;
+    gl.querySelector('.tick').textContent = (niceMax * frac) < 1 ? (niceMax*frac).toFixed(2) : Math.round(niceMax*frac);
+    chartEl.insertBefore(gl, barsWrap);
+  });
+
+  barsWrap.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const v = values[cat.key];
+    const heightPct = Math.max((v / niceMax) * 100, v > 0 ? 2 : 0);
+    const col = document.createElement('div');
+    col.className = 'col';
+    col.innerHTML = `
+      <div class="bar ${cat.cls}" style="height:${heightPct}%">
+        ${heightPct > 18 ? `<span class="bar-label"></span>` : ''}
+      </div>
+      <span class="axis-label"></span>
+    `;
+    const barEl = col.querySelector('.bar');
+    const lbl = col.querySelector('.bar-label');
+    if (lbl) lbl.textContent = fmtKm2(v);
+    col.querySelector('.axis-label').textContent = cat.label.split(' ')[0];
+    barEl.addEventListener('pointermove', (e) => showTooltip(e, `<span class="v">${fmtKm2(v)}</span> · ${cat.label}`));
+    barEl.addEventListener('pointerleave', hideTooltip);
+    barsWrap.appendChild(col);
+  });
+
+  // table view (kept in sync with the same values)
+  const tbody = document.getElementById('dataTableBody');
+  tbody.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const pct = (values[cat.key] / total) * 100;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td></td><td class="num"></td><td class="num"></td>`;
+    tr.children[0].textContent = cat.label;
+    tr.children[1].textContent = fmtKm2(values[cat.key]);
+    tr.children[2].textContent = pct.toFixed(1) + '%';
+    tbody.appendChild(tr);
+  });
+}
+
+function renderTileList(freshHits, staleHits) {
+  const tileList = document.getElementById('tileList');
+  tileList.innerHTML = '';
+  const combined = [
+    ...freshHits.map(f => ({ f, tag: 'fresh', label: '2023–24' })),
+    ...staleHits.map(f => ({ f, tag: 'stale', label: '2017' })),
+  ];
+  if (!combined.length) {
+    tileList.innerHTML = '<div class="tile-row"><span class="name">No overlapping tiles</span></div>';
+    return;
+  }
+  combined.forEach(({ f, tag, label }) => {
+    const p = f.properties;
+    const row = document.createElement('div');
+    row.className = 'tile-row';
+    const name = p.tile || p.project || 'tile';
+    row.innerHTML = `<span class="tile-tag ${tag}"></span><span class="name"></span>`;
+    row.querySelector('.tile-tag').textContent = label;
+    row.querySelector('.name').textContent = name;
+    if (p.laz_url) {
+      const a = document.createElement('a');
+      a.href = p.laz_url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = '↗';
+      row.appendChild(a);
+    }
+    tileList.appendChild(row);
+  });
+}
+
+const HAZARD_RADIUS_BY_CONFIDENCE = { high: 9, medium: 7, low: 5 };
+
+function renderHazards(routeId) {
+  hazardLayerGroup.clearLayers();
+  Object.keys(hazardMarkersById).forEach(k => delete hazardMarkersById[k]);
+
+  const hazards = HAZARDS_BY_ROUTE[routeId] || [];
+
+  // legend — only the types actually present on this route
+  const legend = document.getElementById('hazardLegend');
+  legend.innerHTML = '';
+  const typesPresent = [...new Set(hazards.map(h => h.type))];
+  typesPresent.forEach(type => {
+    const meta = HAZARD_TYPES[type];
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<span class="sw" style="background:${meta.color}"></span><span></span>`;
+    row.querySelector('span:last-child').textContent = meta.label;
+    legend.appendChild(row);
+  });
+
+  // map markers — denied hazards render dimmed, accepted get a heavier ring
+  hazards.forEach(h => {
+    const meta = HAZARD_TYPES[h.type];
+    const status = hazardStatus[h.id];
+    const radius = HAZARD_RADIUS_BY_CONFIDENCE[h.confidence] || 6;
+    const marker = L.circleMarker([h.lat, h.lon], {
+      radius,
+      color: status === 'accepted' ? '#0E7A43' : '#FFFFFF',
+      weight: status === 'accepted' ? 3 : 2,
+      fillColor: meta.color,
+      fillOpacity: status === 'denied' ? 0.25 : 0.9,
+      className: 'hazard-marker',
+    });
+    marker.bindPopup(`
+      <div class="popup-title">${meta.label} — ${h.confidence} confidence</div>
+      <div class="popup-row"><span>Hazard ID</span><b>${h.id}</b></div>
+      <div class="popup-row"><span>Note</span><b>${h.note}</b></div>
+      <div class="popup-row"><span>Status</span><b>${status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Pending review'}</b></div>
+    `);
+    marker.addTo(hazardLayerGroup);
+    hazardMarkersById[h.id] = marker;
+  });
+
+  // status summary
+  const summaryEl = document.getElementById('hazardStatusSummary');
+  const acceptedCount = hazards.filter(h => hazardStatus[h.id] === 'accepted').length;
+  const deniedCount = hazards.filter(h => hazardStatus[h.id] === 'denied').length;
+  const pendingCount = hazards.length - acceptedCount - deniedCount;
+  summaryEl.textContent = hazards.length
+    ? `${pendingCount} pending · ${acceptedCount} accepted · ${deniedCount} denied`
+    : '';
+
+  // clickable list
+  const list = document.getElementById('hazardList');
+  list.innerHTML = '';
+  if (!hazards.length) {
+    list.innerHTML = '<div class="hazard-row" style="cursor:default"><span class="body"><span class="type">No hazards flagged</span></span></div>';
+    return;
+  }
+  hazards.forEach(h => {
+    const meta = HAZARD_TYPES[h.type];
+    const status = hazardStatus[h.id];
+    const row = document.createElement('div');
+    row.className = 'hazard-row' + (status ? ` status-${status}` : '');
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    row.innerHTML = `
+      <span class="dot" style="background:${meta.color}"></span>
+      <span class="body">
+        <span class="top"><span class="type"></span><span class="conf ${h.confidence}"></span></span>
+        <span class="note"></span>
+        <span class="actions">
+          <button type="button" class="hazard-action accept${status === 'accepted' ? ' active' : ''}">✓ Accept</button>
+          <button type="button" class="hazard-action deny${status === 'denied' ? ' active' : ''}">✕ Deny</button>
+        </span>
+      </span>
+    `;
+    row.querySelector('.type').textContent = `${meta.label} · ${h.id}`;
+    row.querySelector('.conf').textContent = h.confidence;
+    row.querySelector('.note').textContent = h.note;
+
+    const panToHazard = () => {
+      const marker = hazardMarkersById[h.id];
+      if (!marker) return;
+      map.setView([h.lat, h.lon], Math.max(map.getZoom(), 13), { animate: true });
+      marker.openPopup();
+    };
+    row.addEventListener('click', panToHazard);
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); panToHazard(); }
+    });
+
+    row.querySelector('.hazard-action.accept').addEventListener('click', (e) => {
+      e.stopPropagation();
+      setHazardStatus(h.id, 'accepted');
+    });
+    row.querySelector('.hazard-action.deny').addEventListener('click', (e) => {
+      e.stopPropagation();
+      setHazardStatus(h.id, 'denied');
+    });
+
+    list.appendChild(row);
+  });
+}
+
+async function main() {
+  [usgsData, evergladesData] = await Promise.all([
+    loadJSON('data/miamidade_coverage.geojson'),
+    loadJSON('data/everglades_2017_coverage.geojson'),
+  ]);
+
+  document.getElementById('countUsgs').textContent = usgsData.features.length.toLocaleString();
+  document.getElementById('countEverglades').textContent = evergladesData.features.length.toLocaleString();
+
+  const usgsLayerGroup = L.geoJSON(usgsData, {
+    style: styleUsgs,
+    onEachFeature: (feature, layer) => {
+      const p = feature.properties;
+      layer.bindPopup(`
+        <div class="popup-title">Tile ${p.tile}</div>
+        <div class="popup-row"><span>Source</span><b>${p.source}</b></div>
+        <div class="popup-row"><span>Collected</span><b>${fmtDate(p.date)}</b></div>
+        <a class="popup-link" href="${p.laz_url}" target="_blank" rel="noopener">Download LAZ tile ↗</a>
+      `);
+      layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.35, weight: 2 }));
+      layer.on('mouseout', () => layer.setStyle(styleUsgs()));
+    }
+  }).addTo(map);
+
+  const evergladesLayerGroup = L.geoJSON(evergladesData, {
+    style: styleEverglades,
+    onEachFeature: (feature, layer) => {
+      const p = feature.properties;
+      layer.bindPopup(`
+        <div class="popup-title">${p.project}</div>
+        <div class="popup-row"><span>Source</span><b>${p.source}</b></div>
+        <div class="popup-row"><span>Collected</span><b>${p.date}</b></div>
+      `);
+    }
+  }).addTo(map);
+
+  // filters: dataset visibility is purely a map-display concern — the coverage analysis
+  // always considers all datasets regardless of what's toggled visible here, since hiding
+  // a layer to compare density shouldn't change what the tool recommends.
+  document.getElementById('layerToggleUsgs2024').addEventListener('change', (e) => {
+    if (e.target.checked) usgsLayerGroup.addTo(map); else map.removeLayer(usgsLayerGroup);
+  });
+  document.getElementById('layerToggleUsgs2017').addEventListener('change', (e) => {
+    if (e.target.checked) evergladesLayerGroup.addTo(map); else map.removeLayer(evergladesLayerGroup);
+  });
+
+  const initialRoute = SAMPLE_ROUTES.find(r => r.id === activeRouteId);
+  document.getElementById('bufferSlider').value = initialRoute.bufferFt;
+  document.getElementById('bufferVal').textContent = `${initialRoute.bufferFt} ft`;
+
+  renderRoutePills();
+  analyzeActiveRoute();
+}
+
+main().catch(console.error);
+</script>
+</body>
+</html>

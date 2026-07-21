@@ -1,0 +1,27 @@
+{
+  "pointCount": 1621282,
+  "originalPointCount": 1624009,
+  "boundsMeters": {
+    "xMax": 1523.9969482421875,
+    "yMax": 314.5596923828125,
+    "zMax": 40.58412170410156,
+    "xMin": 0.0,
+    "yMin": 0.0,
+    "zMin": 0.0
+  },
+  "sourceOffsetFeet": {
+    "x": 920000.0,
+    "y": 513871.12,
+    "z": -2.23
+  },
+  "crs": "NAD83(2011) / Florida East (ftUS) + NAVD88 height - Geoid18 (ftUS)",
+  "sourceFile": "USGS_LPC_FL_MiamiDade_D23_LID2024_319351_0901.laz",
+  "classificationCodes": {
+    "1": "Unclassified",
+    "2": "Ground",
+    "9": "Water",
+    "17": "Bridge deck",
+    "18": "High noise / other",
+    "20": "Reserved"
+  }
+}
