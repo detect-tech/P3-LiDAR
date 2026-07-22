@@ -1,0 +1,31 @@
+{
+  "name": "USGS_LPC_FL_MiamiDade_D23_LID2024_319051_0901",
+  "image": "USGS_LPC_FL_MiamiDade_D23_LID2024_319051_0901_slope.png",
+  "bounds_wgs84": {
+    "south": 25.751390586681456,
+    "north": 25.76204905045464,
+    "west": -80.19842835526909,
+    "east": -80.18866118411191
+  },
+  "cell_size_m": 2.93,
+  "legend": [
+    {
+      "slope_deg": 0.0,
+      "color": "rgba(60,180,90,0.59)"
+    },
+    {
+      "slope_deg": 5.0,
+      "color": "rgba(255,210,60,0.67)"
+    },
+    {
+      "slope_deg": 15.0,
+      "color": "rgba(255,140,40,0.75)"
+    },
+    {
+      "slope_deg": 30.0,
+      "color": "rgba(220,40,40,0.82)"
+    }
+  ],
+  "max_slope_deg": 47.99,
+  "mean_slope_deg": 2.08
+}

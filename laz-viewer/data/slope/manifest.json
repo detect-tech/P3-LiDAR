@@ -1,0 +1,126 @@
+[
+  {
+    "name": "USGS_LPC_FL_MiamiDade_D23_LID2024_319051_0901",
+    "image": "USGS_LPC_FL_MiamiDade_D23_LID2024_319051_0901_slope.png",
+    "bounds_wgs84": {
+      "south": 25.751390586681456,
+      "north": 25.76204905045464,
+      "west": -80.19842835526909,
+      "east": -80.18866118411191
+    },
+    "cell_size_m": 2.93,
+    "legend": [
+      {
+        "slope_deg": 0.0,
+        "color": "rgba(60,180,90,0.59)"
+      },
+      {
+        "slope_deg": 5.0,
+        "color": "rgba(255,210,60,0.67)"
+      },
+      {
+        "slope_deg": 15.0,
+        "color": "rgba(255,140,40,0.75)"
+      },
+      {
+        "slope_deg": 30.0,
+        "color": "rgba(220,40,40,0.82)"
+      }
+    ],
+    "max_slope_deg": 47.99,
+    "mean_slope_deg": 2.08
+  },
+  {
+    "name": "USGS_LPC_FL_MiamiDade_D23_LID2024_318151_0901",
+    "image": "USGS_LPC_FL_MiamiDade_D23_LID2024_318151_0901_slope.png",
+    "bounds_wgs84": {
+      "south": 25.78946290179569,
+      "north": 25.80332469242611,
+      "west": -80.19817242827594,
+      "east": -80.18520083440421
+    },
+    "cell_size_m": 3.81,
+    "legend": [
+      {
+        "slope_deg": 0.0,
+        "color": "rgba(60,180,90,0.59)"
+      },
+      {
+        "slope_deg": 5.0,
+        "color": "rgba(255,210,60,0.67)"
+      },
+      {
+        "slope_deg": 15.0,
+        "color": "rgba(255,140,40,0.75)"
+      },
+      {
+        "slope_deg": 30.0,
+        "color": "rgba(220,40,40,0.82)"
+      }
+    ],
+    "max_slope_deg": 30.55,
+    "mean_slope_deg": 1.24
+  },
+  {
+    "name": "USGS_LPC_FL_MiamiDade_D23_LID2024_318451_0901",
+    "image": "USGS_LPC_FL_MiamiDade_D23_LID2024_318451_0901_slope.png",
+    "bounds_wgs84": {
+      "south": 25.77569533646155,
+      "north": 25.78956881941892,
+      "west": -80.1982649134986,
+      "east": -80.18320563635547
+    },
+    "cell_size_m": 3.81,
+    "legend": [
+      {
+        "slope_deg": 0.0,
+        "color": "rgba(60,180,90,0.59)"
+      },
+      {
+        "slope_deg": 5.0,
+        "color": "rgba(255,210,60,0.67)"
+      },
+      {
+        "slope_deg": 15.0,
+        "color": "rgba(255,140,40,0.75)"
+      },
+      {
+        "slope_deg": 30.0,
+        "color": "rgba(220,40,40,0.82)"
+      }
+    ],
+    "max_slope_deg": 64.31,
+    "mean_slope_deg": 2.04
+  },
+  {
+    "name": "USGS_LPC_FL_MiamiDade_D23_LID2024_318751_0901",
+    "image": "USGS_LPC_FL_MiamiDade_D23_LID2024_318751_0901_slope.png",
+    "bounds_wgs84": {
+      "south": 25.76193797000497,
+      "north": 25.775812920087024,
+      "west": -80.1983573314358,
+      "east": -80.18303397546887
+    },
+    "cell_size_m": 3.81,
+    "legend": [
+      {
+        "slope_deg": 0.0,
+        "color": "rgba(60,180,90,0.59)"
+      },
+      {
+        "slope_deg": 5.0,
+        "color": "rgba(255,210,60,0.67)"
+      },
+      {
+        "slope_deg": 15.0,
+        "color": "rgba(255,140,40,0.75)"
+      },
+      {
+        "slope_deg": 30.0,
+        "color": "rgba(220,40,40,0.82)"
+      }
+    ],
+    "max_slope_deg": 65.39,
+    "mean_slope_deg": 2.14
+  }
+]

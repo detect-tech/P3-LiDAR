@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>LiDAR Coverage & Route Planner — Miami-Dade</title>
+<title>LIDACore — LiDAR Coverage & Hazard Intelligence</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -59,7 +59,7 @@
     padding: 4px 12px; font-size:0.75rem; font-weight:500;
   }
 
-  #themeToggle, #satelliteToggle {
+  #themeToggle, #satelliteToggle, .header-btn {
     display:inline-flex; align-items:center; gap:6px;
     height:32px; padding:0 14px;
     border-radius: var(--radius-full);
@@ -69,9 +69,9 @@
     cursor:pointer;
     transition: background 150ms ease, border-color 150ms ease;
   }
-  #themeToggle:hover, #satelliteToggle:hover { background: var(--bg-subtle); }
-  #themeToggle:focus-visible, #satelliteToggle:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border-focus); }
-  #themeToggle .icon, #satelliteToggle .icon { font-size:0.9rem; }
+  #themeToggle:hover, #satelliteToggle:hover, .header-btn:hover { background: var(--bg-subtle); }
+  #themeToggle:focus-visible, #satelliteToggle:focus-visible, .header-btn:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border-focus); }
+  #themeToggle .icon, #satelliteToggle .icon, .header-btn .icon { font-size:0.9rem; }
   #satelliteToggle[aria-pressed="true"] { background: rgba(77,127,227,0.14); border-color: var(--primary); color: var(--primary); }
 
   #body { flex:1; display:flex; min-height:0; }
@@ -93,26 +93,6 @@
     color:var(--text-secondary); font-size:0.7rem; text-transform:uppercase;
     letter-spacing:0.04em; margin: 0 0 10px; font-weight:600;
   }
-
-  /* route selector (filter row) */
-  .route-pills { display:flex; flex-direction:column; gap:8px; }
-  .route-pill {
-    display:flex; flex-direction:column; gap:2px;
-    text-align:left; width:100%;
-    border-radius: var(--radius-sm);
-    border:1px solid var(--border);
-    background: var(--bg-subtle);
-    color: var(--text);
-    padding: 10px 12px;
-    cursor:pointer;
-    font-family:inherit;
-    transition: background 150ms ease, border-color 150ms ease;
-  }
-  .route-pill:hover { border-color: var(--border-strong); }
-  .route-pill.active { background: rgba(77,127,227,0.14); border-color: var(--primary); }
-  .route-pill .name { font-weight:600; font-size:0.8125rem; }
-  .route-pill .desc { color:var(--text-muted); font-size:0.7rem; }
-  .route-pill:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); }
 
   .slider-row { display:flex; align-items:center; gap:12px; margin-top:12px; }
   .slider-row label { color:var(--text-secondary); font-size:0.75rem; white-space:nowrap; }
@@ -140,6 +120,7 @@
   .recommendation.good { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
   .recommendation.warn { background: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning); border-color: color-mix(in srgb, var(--warning) 35%, transparent); }
   .recommendation.bad { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); border-color: color-mix(in srgb, var(--error) 35%, transparent); }
+  .recommendation.info { background: var(--info-bg); color: var(--info); border: 1px solid var(--info); border-color: color-mix(in srgb, var(--info) 35%, transparent); }
 
   /* stacked composition bar */
   .stackbar-wrap { }
@@ -167,39 +148,44 @@
   .chart-legend .sw.gap { background: var(--error); }
   .chart-legend .label { color:var(--text-secondary); flex:1; }
   .chart-legend .value { color:var(--text); font-weight:500; }
+  .composition-empty { color:var(--text-muted); font-size:0.75rem; text-align:center; padding:16px 6px; }
 
-  /* magnitude bar chart */
-  .barchart { position:relative; height:150px; margin-top:8px; padding-left:34px; }
-  .barchart .gridline {
-    position:absolute; left:34px; right:0; height:1px; background:var(--border);
+  .upload-modal-overlay {
+    position:fixed; inset:0; z-index:4000;
+    background: rgba(11,13,26,0.45);
+    display:flex; align-items:center; justify-content:center; padding:20px;
   }
-  .barchart .gridline .tick {
-    position:absolute; left:-34px; top:-6px; width:28px; text-align:right;
-    color:var(--text-muted); font-size:0.65rem;
+  .upload-modal-overlay[hidden] { display:none; }
+  .upload-modal {
+    width:340px; max-width:100%; text-align:left;
+    background: var(--surface-raised); border:1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    padding: 22px 24px 20px;
   }
-  .barchart .bars {
-    position:absolute; left:34px; right:0; top:0; bottom:0;
-    display:flex; align-items:flex-end; justify-content:space-around;
+  @media (prefers-reduced-motion: no-preference) {
+    .upload-modal { animation: chat-in 200ms cubic-bezier(0.16,1,0.3,1); }
   }
-  .barchart .col { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; flex:1; position:relative; }
-  .barchart .bar {
-    width:22px; border-radius:4px 4px 0 0;
-    transition: filter 120ms ease;
-    position:relative;
+  .upload-modal h3 { margin:0 0 14px; font-size:1rem; font-weight:700; color:var(--text); }
+  .upload-dropzone {
+    width:100%; display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding: 28px 16px; margin-bottom:16px;
+    border:2px dashed var(--border-strong); border-radius: var(--radius-sm);
+    background: var(--bg-subtle); color:var(--text);
+    font-family:inherit; cursor:pointer;
+    transition: border-color 150ms ease, background 150ms ease;
   }
-  .barchart .bar:hover { filter: brightness(1.2); }
-  .barchart .bar.fresh { background: var(--success); }
-  .barchart .bar.flag { background: var(--warning); }
-  .barchart .bar.excluded { background: var(--excluded); }
-  .barchart .bar.gap { background: var(--error); }
-  .barchart .bar-label {
-    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
-    font-size:0.675rem; color:var(--text); white-space:nowrap; font-weight:500;
+  .upload-dropzone:hover { border-color: var(--primary); background: rgba(77,127,227,0.08); }
+  .upload-dropzone:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); }
+  .upload-dropzone .dz-icon { font-size:1.8rem; }
+  .upload-dropzone .dz-title { font-weight:600; font-size:0.8125rem; color:var(--text); }
+  .upload-dropzone .dz-formats { color:var(--text-muted); font-size:0.7rem; }
+  .upload-modal-close {
+    width:100%; height:36px; border:1px solid var(--border-strong); border-radius: var(--radius-full);
+    background: transparent; color:var(--text); font-family:inherit; font-size:0.8125rem; font-weight:600; cursor:pointer;
+    transition: background 150ms ease;
   }
-  .barchart .axis-label {
-    position:absolute; bottom:-20px; left:50%; transform:translateX(-50%);
-    font-size:0.65rem; color:var(--text-muted); white-space:nowrap;
-  }
+  .upload-modal-close:hover { background: var(--bg-subtle); }
+  .upload-modal-close:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); }
 
   .chart-tooltip {
     position:fixed; z-index:2000; pointer-events:none;
@@ -211,29 +197,6 @@
     white-space:nowrap;
   }
   .chart-tooltip .v { font-weight:600; }
-
-  .table-toggle {
-    background:none; border:none; color:var(--link); font-family:inherit;
-    font-size:0.75rem; cursor:pointer; padding:0; text-decoration:underline;
-    margin-top:10px;
-  }
-  .table-toggle:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); border-radius:2px; }
-
-  .data-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:0.75rem; }
-  .data-table th, .data-table td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border); }
-  .data-table th { color:var(--text-muted); font-weight:500; text-transform:uppercase; font-size:0.65rem; letter-spacing:0.03em; }
-  .data-table td { color:var(--text); }
-  .data-table td.num { font-variant-numeric: tabular-nums; text-align:right; }
-
-  .tile-list { max-height: 170px; overflow-y:auto; border:1px solid var(--border); border-radius: var(--radius-sm); margin-top:8px; }
-  .tile-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--border); font-size:0.75rem; }
-  .tile-row:last-child { border-bottom:none; }
-  .tile-row a { color: var(--link); text-decoration:none; flex:0 0 auto; }
-  .tile-row a:hover { text-decoration:underline; }
-  .tile-row .name { color:var(--text-secondary); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .tile-tag { font-size:0.65rem; padding:2px 6px; border-radius:4px; font-weight:600; flex:0 0 auto; }
-  .tile-tag.fresh { background: color-mix(in srgb, var(--success) 18%, var(--bg-subtle)); color:var(--success); }
-  .tile-tag.stale { background: color-mix(in srgb, var(--warning) 18%, var(--bg-subtle)); color:var(--warning-text); }
 
   /* hazards */
   .hazard-legend { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
@@ -282,9 +245,9 @@
     position:absolute; top:16px; right:16px; z-index:1000;
     background: var(--surface-raised); border:1px solid var(--border);
     border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-    padding: 14px 16px; font-size:0.75rem; width:240px;
+    padding: 14px 16px; font-size:0.75rem; width:250px; max-height: calc(100vh - 130px); overflow-y:auto;
   }
-  .map-legend .title { color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; font-size:0.68rem; margin-bottom:8px; font-weight:600; }
+  .map-legend .title { color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; font-size:0.68rem; font-weight:600; }
   .map-legend .legend-hint { text-transform:none; letter-spacing:0; font-weight:400; color:var(--text-muted); }
   .map-legend .row { display:flex; align-items:center; gap:8px; padding:4px 0; }
   .map-legend .toggle-row { cursor:pointer; }
@@ -292,6 +255,194 @@
   .map-legend .sw { width:12px; height:12px; border-radius:3px; flex:0 0 auto; }
   .map-legend .lbl { color:var(--text-secondary); flex:1; }
   .map-legend .cnt { color:var(--text-muted); }
+
+  .legend-header {
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    cursor:pointer; margin-bottom:8px; user-select:none;
+  }
+  .legend-header:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); border-radius:4px; }
+  .legend-chevron { color:var(--text-muted); font-size:0.7rem; transition: transform 180ms ease; flex:0 0 auto; }
+  .map-legend.collapsed .legend-header { margin-bottom:0; }
+  .map-legend.collapsed .legend-chevron { transform: rotate(-90deg); }
+  .map-legend.collapsed .legend-body { display:none; }
+
+  .raster-toggle-row { display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer; }
+  .raster-toggle-row input[type=checkbox] { margin:0; accent-color: var(--primary); cursor:pointer; flex:0 0 auto; }
+  .raster-toggle-row .name { font-weight:500; color:var(--text); flex:1; }
+  .raster-legend { display:none; flex-direction:column; gap:4px; margin: 2px 0 10px 24px; font-size:0.7rem; }
+  .raster-legend.show { display:flex; }
+  .raster-legend .legend-row { display:flex; align-items:center; gap:6px; color:var(--text-secondary); }
+  .raster-legend .swatch { width:12px; height:12px; border-radius:3px; flex:0 0 auto; border:1px solid rgba(0,0,0,0.15); }
+  .raster-note { color:var(--text-muted); font-size:0.7rem; margin:0 0 8px; }
+
+  /* brand logo */
+  .brand-name { font-weight:700; letter-spacing:-0.01em; }
+  .brand-name .accent { color: var(--primary); }
+
+  /* splash / intake screen */
+  .splash-overlay {
+    position:fixed; inset:0; z-index:5000;
+    background: var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    transition: opacity 280ms ease, visibility 280ms ease;
+  }
+  .splash-overlay.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+  .splash-card {
+    width:380px; max-width:100%; text-align:center;
+    background: var(--surface-raised); border:1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    padding: 40px 32px 32px;
+  }
+  .splash-card .logo-mark { width:48px; height:48px; margin-bottom:14px; }
+  .splash-title { font-size:1.5rem; font-weight:700; letter-spacing:-0.01em; margin-bottom:4px; }
+  .splash-title .accent { color: var(--primary); }
+  .splash-tag { color:var(--text-muted); font-size:0.8125rem; margin: 0 0 28px; line-height:1.5; }
+  .splash-form { display:flex; flex-direction:column; gap:14px; text-align:left; }
+  .splash-field label { display:block; font-size:0.68rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; }
+  .splash-field select { width:100%; }
+  .splash-field select:disabled { opacity:0.5; cursor:not-allowed; }
+  .splash-error {
+    color:var(--error); background: var(--error-bg); border:1px solid color-mix(in srgb, var(--error) 35%, transparent);
+    border-radius: var(--radius-sm); padding:9px 11px; font-size:0.75rem; line-height:1.4; margin:0;
+  }
+  .splash-error[hidden] { display:none; }
+  .splash-continue {
+    margin-top:4px; width:100%; height:40px; border:none; border-radius: var(--radius-full);
+    background: var(--primary); color:#fff; font-family:inherit; font-size:0.8125rem; font-weight:600;
+    cursor:pointer; transition: filter 150ms ease, opacity 150ms ease;
+  }
+  .splash-continue:hover:not(:disabled) { filter: brightness(1.08); }
+  .splash-continue:disabled { opacity:0.45; cursor:not-allowed; }
+  .splash-continue:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); }
+  .splash-hint { color:var(--text-muted); font-size:0.68rem; margin:14px 0 0; }
+
+  /* launch transition: card fades out, a plane flies across as the map takes over */
+  .splash-card.launching { animation: splash-card-out 380ms ease forwards; }
+  @keyframes splash-card-out { to { opacity:0; transform: scale(0.96) translateY(6px); } }
+
+  .splash-flyby { position:absolute; inset:0; display:none; pointer-events:none; overflow:hidden; }
+  .splash-flyby.playing { display:block; }
+  .flyby-plane {
+    position:absolute; left:-12%; top:55%; opacity:0;
+    filter: drop-shadow(0 6px 14px rgba(0,74,203,0.35));
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .splash-flyby.playing .flyby-plane { animation: flyby-move 2600ms cubic-bezier(0.45,0,0.4,1) forwards; }
+  }
+  @keyframes flyby-move {
+    0%   { left:-12%; top:58%; opacity:0; transform: rotate(80deg) scale(0.8); }
+    14%  { opacity:1; }
+    55%  { top:34%; transform: rotate(72deg) scale(1.15); }
+    100% { left:112%; top:4%; opacity:1; transform: rotate(62deg) scale(1.3); }
+  }
+
+  /* route dropdown */
+  .route-select-wrap { position:relative; }
+  .route-select {
+    width:100%; appearance:none; -webkit-appearance:none;
+    background: var(--bg-subtle) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="%234D5674" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat right 14px center;
+    color: var(--text); border:1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 34px 10px 12px; font-family:inherit; font-size:0.8125rem; font-weight:600;
+    cursor:pointer; transition: border-color 150ms ease;
+  }
+  .route-select:hover { border-color: var(--border-strong); }
+  .route-select:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); }
+  .route-desc { color:var(--text-muted); font-size:0.7rem; margin: 6px 2px 0; min-height: 1.2em; }
+
+  .coverage-placeholder {
+    display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px;
+    padding: 28px 16px; color:var(--text-muted); font-size:0.8125rem;
+    border:1px dashed var(--border-strong); border-radius: var(--radius-sm);
+  }
+  .coverage-placeholder .big { font-size:1.6rem; }
+
+  /* toast */
+  .toast-stack { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:3000; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; }
+  .toast {
+    background: var(--navy-900); color:#E9F1F7; border:1px solid #3D4258;
+    border-radius: var(--radius-full); padding:10px 18px; font-size:0.8125rem;
+    box-shadow: var(--shadow-lg); display:flex; align-items:center; gap:8px;
+    animation: toast-in 220ms cubic-bezier(0.16,1,0.3,1);
+  }
+  .toast.leaving { animation: toast-out 180ms ease forwards; }
+  @keyframes toast-in { from { opacity:0; transform:translateY(12px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes toast-out { to { opacity:0; transform:translateY(8px) scale(0.96); } }
+
+  /* panel entrance */
+  @media (prefers-reduced-motion: no-preference) {
+    .panel-section { animation: section-in 320ms ease backwards; }
+  }
+  @keyframes section-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+  /* hazard marker pulse for pending */
+  @media (prefers-reduced-motion: no-preference) {
+    .hazard-marker.status-pending { animation: hazard-pulse 1.8s ease-in-out infinite; }
+  }
+  @keyframes hazard-pulse {
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(245,198,76,0.55)); }
+    50% { filter: drop-shadow(0 0 5px rgba(245,198,76,0.85)); }
+  }
+
+  /* chat assistant */
+  .chat-fab {
+    position:absolute; bottom:16px; right:16px; z-index:1000;
+    width:52px; height:52px; border-radius:50%;
+    background: var(--primary); color:#fff; border:none;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; cursor:pointer; box-shadow: var(--shadow-lg);
+    transition: transform 150ms ease;
+  }
+  .chat-fab:hover { transform: scale(1.06); }
+  .chat-fab:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border-focus); }
+  @media (prefers-reduced-motion: no-preference) {
+    .chat-fab::after {
+      content:''; position:absolute; inset:-4px; border-radius:50%;
+      border:2px solid var(--primary); opacity:0.5;
+      animation: chat-ping 2.4s ease-out infinite;
+      pointer-events:none;
+    }
+  }
+  @keyframes chat-ping { 0% { transform:scale(0.9); opacity:0.5; } 100% { transform:scale(1.35); opacity:0; } }
+
+  .chat-panel {
+    position:absolute; bottom:78px; right:16px; z-index:1000;
+    width:320px; max-height:min(420px, calc(100% - 100px));
+    background: var(--surface-raised); border:1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .chat-panel[hidden] { display:none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .chat-panel { animation: chat-in 200ms cubic-bezier(0.16,1,0.3,1); }
+  }
+  @keyframes chat-in { from { opacity:0; transform:scale(0.94) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
+
+  .chat-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); font-weight:600; font-size:0.8125rem; }
+  .chat-header .sub { font-weight:400; color:var(--text-muted); font-size:0.675rem; display:block; margin-top:1px; }
+  .chat-close { background:none; border:none; color:var(--text-muted); font-size:1rem; cursor:pointer; padding:2px 6px; line-height:1; }
+  .chat-close:hover { color:var(--text); }
+  .chat-close:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); border-radius:4px; }
+
+  .chat-log { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:8px; min-height:80px; max-height:220px; }
+  .chat-bubble { max-width:88%; padding:8px 12px; border-radius:12px; font-size:0.75rem; line-height:1.45; white-space:pre-wrap; }
+  .chat-bubble.user { align-self:flex-end; background: var(--primary); color:#fff; border-bottom-right-radius:3px; }
+  .chat-bubble.assistant { align-self:flex-start; background: var(--bg-subtle); color:var(--text); border-bottom-left-radius:3px; }
+  .chat-empty { color:var(--text-muted); font-size:0.75rem; text-align:center; padding:14px 6px; }
+
+  .chat-suggestions { display:flex; flex-direction:column; gap:6px; padding:10px 14px 14px; border-top:1px solid var(--border); }
+  .chat-chip {
+    text-align:left; background: var(--bg-subtle); border:1px solid var(--border);
+    border-radius: var(--radius-sm); padding:7px 10px; font-size:0.7rem; color:var(--text);
+    font-family:inherit; cursor:pointer; transition: border-color 150ms ease, background 150ms ease;
+  }
+  .chat-chip:hover { border-color:var(--primary); background: rgba(77,127,227,0.08); }
+  .chat-chip:focus-visible { outline:none; box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--border-focus); }
+  .chat-typing { align-self:flex-start; display:flex; gap:3px; padding:9px 12px; background:var(--bg-subtle); border-radius:12px; border-bottom-left-radius:3px; }
+  .chat-typing span { width:5px; height:5px; border-radius:50%; background:var(--text-muted); animation: chat-bounce 1.1s infinite ease-in-out; }
+  .chat-typing span:nth-child(2) { animation-delay:0.15s; }
+  .chat-typing span:nth-child(3) { animation-delay:0.3s; }
+  @keyframes chat-bounce { 0%,80%,100% { transform:translateY(0); opacity:0.4; } 40% { transform:translateY(-4px); opacity:1; } }
 
   .leaflet-popup-content-wrapper { background: var(--surface-raised); color:var(--text); border-radius: 12px; border:1px solid var(--border); }
   .leaflet-popup-tip { background: var(--surface-raised); }
@@ -305,18 +456,85 @@
   .leaflet-control-zoom a { background: var(--surface-raised) !important; color:var(--text) !important; border-color: var(--border) !important; }
 
   /* scrollbar polish for panel */
-  #panel::-webkit-scrollbar, .tile-list::-webkit-scrollbar { width:8px; }
-  #panel::-webkit-scrollbar-thumb, .tile-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius:4px; }
+  #panel::-webkit-scrollbar { width:8px; }
+  #panel::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius:4px; }
 </style>
 </head>
 <body>
 
+<div class="splash-overlay" id="splash">
+  <div class="splash-card" role="dialog" aria-modal="true" aria-label="Choose a service area">
+    <svg class="logo-mark" width="48" height="48" viewBox="0 0 100 100" role="img" aria-label="LIDACore logo">
+      <circle cx="50" cy="50" r="50" fill="#E8EFFC"/>
+      <g transform="translate(26,26) scale(2)">
+        <g opacity="0.35" fill="#004ACB">
+          <circle cx="5" cy="6" r="0.9"/><circle cx="10" cy="6" r="0.9"/><circle cx="15" cy="6" r="0.9"/>
+          <circle cx="5" cy="11" r="0.9"/><circle cx="10" cy="11" r="0.9"/><circle cx="15" cy="11" r="0.9"/>
+        </g>
+        <path d="M2 17h20" fill="none" stroke="#004ACB" stroke-width="1.4" stroke-linecap="round"/>
+        <g transform="rotate(90 12 12)">
+          <path d="M21 15.5v-2l-7.5-4.7V4.2c0-.8-.7-1.5-1.5-1.5s-1.5.7-1.5 1.5v4.6L3 13.5v2l7.5-2.3V18l-2 1.4v1.7l3.5-1 3.5 1v-1.7l-2-1.4v-4.8z" fill="#004ACB"/>
+        </g>
+      </g>
+    </svg>
+    <div class="splash-title">LIDA<span class="accent">Core</span></div>
+    <p class="splash-tag">LiDAR Coverage &amp; Hazard Intelligence — select a service area to continue.</p>
+    <div class="splash-form">
+      <div class="splash-field">
+        <label for="splashState">State</label>
+        <select class="route-select" id="splashState">
+          <option value="">Select a state</option>
+          <option value="FL">Florida</option>
+          <option value="CA">California</option>
+          <option value="TX">Texas</option>
+          <option value="NY">New York</option>
+        </select>
+      </div>
+      <div class="splash-field">
+        <label for="splashCity">City</label>
+        <select class="route-select" id="splashCity" disabled>
+          <option value="">Select a state first</option>
+        </select>
+      </div>
+      <p class="splash-error" id="splashError" hidden></p>
+      <button type="button" class="splash-continue" id="splashContinue" disabled>Launch LIDACore →</button>
+      <p class="splash-hint">LiDAR coverage is currently available for Miami, Florida.</p>
+    </div>
+  </div>
+  <div class="splash-flyby" id="splashFlyby" aria-hidden="true">
+    <svg class="flyby-plane" width="56" height="56" viewBox="0 0 24 24">
+      <path d="M21 15.5v-2l-7.5-4.7V4.2c0-.8-.7-1.5-1.5-1.5s-1.5.7-1.5 1.5v4.6L3 13.5v2l7.5-2.3V18l-2 1.4v1.7l3.5-1 3.5 1v-1.7l-2-1.4v-4.8z" fill="#004ACB"/>
+    </svg>
+  </div>
+</div>
+
 <header>
-  <div class="brand"><span class="dot"></span> LiDAR Coverage &amp; Route Planner</div>
+  <div class="brand">
+    <svg class="logo-mark" width="28" height="28" viewBox="0 0 100 100" role="img" aria-label="LIDACore logo">
+      <circle cx="50" cy="50" r="50" fill="#E8EFFC"/>
+      <g transform="translate(26,26) scale(2)">
+        <g opacity="0.35" fill="#004ACB">
+          <circle cx="5" cy="6" r="0.9"/><circle cx="10" cy="6" r="0.9"/><circle cx="15" cy="6" r="0.9"/>
+          <circle cx="5" cy="11" r="0.9"/><circle cx="10" cy="11" r="0.9"/><circle cx="15" cy="11" r="0.9"/>
+        </g>
+        <path d="M2 17h20" fill="none" stroke="#004ACB" stroke-width="1.4" stroke-linecap="round"/>
+        <g transform="rotate(90 12 12)">
+          <path d="M21 15.5v-2l-7.5-4.7V4.2c0-.8-.7-1.5-1.5-1.5s-1.5.7-1.5 1.5v4.6L3 13.5v2l7.5-2.3V18l-2 1.4v1.7l3.5-1 3.5 1v-1.7l-2-1.4v-4.8z" fill="#004ACB"/>
+        </g>
+      </g>
+    </svg>
+    <span class="brand-name">LIDA<span class="accent">Core</span></span>
+  </div>
   <div style="display:flex; align-items:center; gap:12px;">
     <span class="badge">Problem 03 · Transmission route planning</span>
     <button id="satelliteToggle" aria-pressed="false" aria-label="Switch to satellite imagery" title="Switch to satellite imagery">
-      <span class="icon" aria-hidden="true">🛰</span><span class="label">Satellite</span>
+      <span class="icon" aria-hidden="true">👁</span><span class="label">Satellite</span>
+    </button>
+    <button id="ingestBtn" class="header-btn" aria-label="Upload a route or LiDAR file — supports KML, KMZ, LAZ, and LAS" title="Upload data — supports .kml, .kmz, .laz, .las">
+      <span class="icon" aria-hidden="true">📤</span><span class="label">Upload</span>
+    </button>
+    <button id="exportBtn" class="header-btn" aria-label="Export the current corridor analysis as JSON" title="Export analysis (.json)">
+      <span class="icon" aria-hidden="true">💾</span><span class="label">Export</span>
     </button>
     <button id="themeToggle" aria-pressed="true" aria-label="Switch to light map view" title="Switch to light map view">
       <span class="icon" aria-hidden="true">☀</span><span class="label">Light view</span>
@@ -326,45 +544,73 @@
 
 <div id="body">
   <div id="map">
-    <div class="map-legend">
-      <div class="title">Coverage layers <span class="legend-hint">(toggle to compare)</span></div>
-      <label class="row toggle-row">
-        <input type="checkbox" id="layerToggleUsgs2024" checked>
-        <span class="sw" style="background:#4D7FE3"></span><span class="lbl">USGS 3DEP 2023–24</span><span class="cnt" id="countUsgs">–</span>
-      </label>
-      <label class="row toggle-row">
-        <input type="checkbox" id="layerToggleUsgs2017" checked>
-        <span class="sw" style="background:#F5C64C"></span><span class="lbl">USGS 3DEP 2017</span><span class="cnt" id="countEverglades">–</span>
-      </label>
-      <div class="row"><span class="sw" style="background:#7DBCF0"></span><span class="lbl">Study corridor</span><span class="cnt"></span></div>
-      <div class="row"><span class="sw" style="background:#E8834A"></span><span class="lbl">Stale (≥2yr) — needs refresh</span><span class="cnt"></span></div>
-      <div class="row"><span class="sw" style="background:#F2988E"></span><span class="lbl">Gap — no data</span><span class="cnt"></span></div>
+    <div class="map-legend" id="mapLegend">
+      <div class="legend-header" id="legendHeader" role="button" tabindex="0" aria-expanded="true" aria-controls="legendBody">
+        <span class="title">Coverage layers <span class="legend-hint">(toggle to compare)</span></span>
+        <span class="legend-chevron" aria-hidden="true">▾</span>
+      </div>
+      <div class="legend-body" id="legendBody">
+        <label class="row toggle-row">
+          <input type="checkbox" id="layerToggleUsgs2024" checked>
+          <span class="sw" style="background:#4D7FE3"></span><span class="lbl">USGS 3DEP 2025</span><span class="cnt" id="countUsgs">–</span>
+        </label>
+        <label class="row toggle-row">
+          <input type="checkbox" id="layerToggleNoaa2019" checked>
+          <span class="sw" style="background:#FF8A5B"></span><span class="lbl">NOAA 2019 Irma</span><span class="cnt" id="countNoaa2019">–</span>
+        </label>
+        <label class="row toggle-row">
+          <input type="checkbox" id="layerToggleNoaa2018" checked>
+          <span class="sw" style="background:#B784F0"></span><span class="lbl">NOAA 2018 ITD</span><span class="cnt" id="countNoaa2018">–</span>
+        </label>
+        <label class="row toggle-row">
+          <input type="checkbox" id="layerToggleUsgs2017" checked>
+          <span class="sw" style="background:#F5C64C"></span><span class="lbl">USGS 3DEP 2017</span><span class="cnt" id="countEverglades">–</span>
+        </label>
+        <label class="row toggle-row">
+          <input type="checkbox" id="layerToggleNoaa2017" checked>
+          <span class="sw" style="background:#E0629C"></span><span class="lbl">NOAA 2017</span><span class="cnt" id="countNoaa2017">–</span>
+        </label>
+        <div class="row"><span class="sw" style="background:#FFE100"></span><span class="lbl">Study corridor</span><span class="cnt"></span></div>
+        <div class="row"><span class="sw" style="background:#E8834A"></span><span class="lbl">Stale (≥2yr) — needs refresh</span><span class="cnt"></span></div>
+        <div class="row"><span class="sw" style="background:#F2988E"></span><span class="lbl">Gap — no data</span><span class="cnt"></span></div>
+      </div>
+    </div>
+
+    <button class="chat-fab" id="chatFab" aria-label="Open assistant chat" aria-expanded="false" title="Ask about this data">💬</button>
+    <div class="chat-panel" id="chatPanel" hidden role="dialog" aria-label="LIDACore assistant">
+      <div class="chat-header">
+        <span>LIDACore Assistant<span class="sub">Ask about hazards, water crossings, and terrain</span></span>
+        <button class="chat-close" id="chatClose" aria-label="Close chat">✕</button>
+      </div>
+      <div class="chat-log" id="chatLog">
+        <div class="chat-empty">Ask about hazards, water crossings, or slope on this corridor.</div>
+      </div>
+      <div class="chat-suggestions" id="chatSuggestions"></div>
     </div>
   </div>
 
   <div id="panel">
 
-    <div class="panel-section">
+    <div class="panel-section" style="animation-delay:0ms;">
       <div class="section-title">Study corridor</div>
-      <div class="route-pills" id="routePills"></div>
+      <div class="route-select-wrap">
+        <select class="route-select" id="routeSelect" aria-label="Choose a study corridor">
+          <option value="">— Select a corridor —</option>
+        </select>
+      </div>
+      <p class="route-desc" id="routeDesc"></p>
       <div class="slider-row">
         <label for="bufferSlider">Corridor width</label>
         <input type="range" id="bufferSlider" min="50" max="2500" step="25" value="500" />
-        <span class="val" id="bufferVal">500 ft</span>
+        <span class="val" id="bufferVal">0.15 km</span>
       </div>
     </div>
 
-    <div class="panel-section">
-      <div class="recommendation good" id="recommendation"><span class="icon">–</span><span class="text">–</span></div>
+    <div class="panel-section" style="animation-delay:40ms;">
+      <div class="recommendation info" id="recommendation"><span class="icon">◎</span><span class="text">Select a study corridor above to see coverage, cost, and hazard analysis for it.</span></div>
     </div>
 
-    <div class="panel-section">
-      <div class="section-title" style="display:flex;">Hazards flagged along corridor<span class="hazard-status-summary" id="hazardStatusSummary"></span></div>
-      <div class="hazard-legend" id="hazardLegend"></div>
-      <div class="hazard-list" id="hazardList"></div>
-    </div>
-
-    <div class="panel-section">
+    <div class="panel-section" style="animation-delay:80ms;">
       <div class="section-title">Corridor summary</div>
       <div class="metric-grid">
         <div class="metric"><div class="k">Route length</div><div class="v" id="mLength">–</div></div>
@@ -372,12 +618,12 @@
         <div class="metric"><div class="k">Already covered</div><div class="v" id="mCovered">–</div></div>
         <div class="metric"><div class="k">Collection gap</div><div class="v" id="mGap">–</div></div>
         <div class="metric"><div class="k">Reusable tiles</div><div class="v" id="mTiles">–</div></div>
-        <div class="metric"><div class="k">Est. cost avoided</div><div class="v" id="mCostAvoided">–</div><div class="note">@ $850/km² typical LiDAR acquisition</div></div>
-        <div class="metric"><div class="k">Est. new collection cost</div><div class="v" id="mCostGap">–</div><div class="note">for the uncovered portion only</div></div>
+        <div class="metric"><div class="k">Est. cost avoided</div><div class="v" id="mCostAvoided">–</div><div class="note" id="costAvoidedNote">@ $850/km² typical LiDAR acquisition</div></div>
+        <div class="metric"><div class="k">Est. new collection cost</div><div class="v" id="mCostGap">–</div><div class="note" id="costGapNote">for the uncovered portion only</div></div>
       </div>
     </div>
 
-    <div class="panel-section">
+    <div class="panel-section" style="animation-delay:120ms;">
       <div class="section-title">Coverage composition</div>
       <div class="stackbar-wrap">
         <div class="stackbar" id="stackbar"></div>
@@ -385,27 +631,43 @@
       </div>
     </div>
 
-    <div class="panel-section" id="magnitudeSection">
-      <div class="section-title">Coverage by category (km²)</div>
-      <div class="barchart" id="barchart">
-        <div class="bars" id="barchartBars"></div>
-      </div>
-      <button class="table-toggle" id="tableToggle">View as table</button>
-      <table class="data-table" id="dataTable" style="display:none">
-        <thead><tr><th>Category</th><th>Area</th><th>Share</th></tr></thead>
-        <tbody id="dataTableBody"></tbody>
-      </table>
+    <div class="panel-section" style="animation-delay:160ms;">
+      <div class="section-title" style="display:flex;">Hazards flagged along corridor<span class="hazard-status-summary" id="hazardStatusSummary"></span></div>
+      <div class="hazard-legend" id="hazardLegend"></div>
+      <div class="hazard-list" id="hazardList"></div>
     </div>
 
-    <div class="panel-section">
-      <div class="section-title">Reusable existing tiles</div>
-      <div class="tile-list" id="tileList"></div>
+    <div class="panel-section" style="animation-delay:200ms;">
+      <div class="section-title">Derived LiDAR rasters <span class="legend-hint" style="font-weight:400;text-transform:none;letter-spacing:0;">(4 processed tiles)</span></div>
+      <p class="raster-note">From real point-cloud processing of 4 adjacent USGS tiles — 319051, 318751, 318451, and 318151 (all suffixed _0901, Miami-Dade, 2024) — via <code>derived_rasters.py</code>. They form one contiguous north–south strip, each tile's edge touching the next. Each toggle applies to all 4 at once. Neither vegetation nor buildings are separately classified in this data, so surface height can't distinguish the two.</p>
+
+      <label class="raster-toggle-row"><input type="checkbox" id="chmToggle"><span class="name">Surface Height (above ground)</span></label>
+      <div class="raster-legend" id="chmLegend"></div>
+
+      <label class="raster-toggle-row"><input type="checkbox" id="qualityToggle"><span class="name">LiDAR resolution</span></label>
+      <div class="raster-legend" id="qualityLegend"></div>
+
+      <label class="raster-toggle-row"><input type="checkbox" id="slopeToggle"><span class="name">Terrain Slope (ground DEM)</span></label>
+      <div class="raster-legend" id="slopeLegend"></div>
     </div>
 
   </div>
 </div>
 
 <div class="chart-tooltip" id="chartTooltip"></div>
+<div class="toast-stack" id="toastStack" role="status" aria-live="polite"></div>
+
+<div class="upload-modal-overlay" id="uploadModalOverlay" hidden>
+  <div class="upload-modal" role="dialog" aria-modal="true" aria-label="Upload data">
+    <h3>Upload data</h3>
+    <button type="button" class="upload-dropzone" id="uploadDropzone">
+      <span class="dz-icon" aria-hidden="true">📤</span>
+      <span class="dz-title">Choose a file or drag it here</span>
+      <span class="dz-formats">.kml · .kmz · .laz · .las</span>
+    </button>
+    <button type="button" class="upload-modal-close" id="uploadModalClose">Cancel</button>
+  </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
@@ -419,6 +681,7 @@ const SAMPLE_ROUTES = [
     desc: 'Provided route (KML) — real ArcGIS-planned corridor, 75ft buffer',
     coords: [[-80.457728,25.662718], [-80.466828,25.666766], [-80.47821,25.676482], [-80.481084,25.702387], [-80.481443,25.73921], [-80.477924,25.762674], [-80.448744,25.81808], [-80.452809,25.925985], [-80.442709,25.938507], [-80.446011,26.059231], [-80.446011,26.059388], [-80.446011,26.059618], [-80.442456,26.06508], [-80.432575,26.071869], [-80.410117,26.076967]],
     bufferFt: 75,
+    costPerMile: 5000, // real per-mile LiDAR acquisition quote for this corridor, not the generic $850/km² estimate used for the sample routes
   },
   {
     id: 'urban-core',
@@ -463,41 +726,40 @@ const HAZARD_TYPES = {
 
 const HAZARDS_BY_ROUTE = {
   'miami-lauderdale': [
-    { id: 'H018', type: 'building',   confidence: 'high',   lat: 25.688338, lon: -80.479726, note: 'Structure near corridor start, 2023 LiDAR' },
-    { id: 'H019', type: 'vegetation', confidence: 'medium', lat: 25.778111, lon: -80.469629, note: 'Canopy overhang, 2023 LiDAR' },
-    { id: 'H020', type: 'water',      confidence: 'medium', lat: 25.860512, lon: -80.450642, note: 'Canal crossing, 2023 LiDAR' },
+    { id: 'H018', type: 'building',   confidence: 'high',   lat: 25.688338, lon: -80.479726, note: 'Structure near corridor start, 2025 LiDAR' },
+    { id: 'H019', type: 'vegetation', confidence: 'medium', lat: 25.778111, lon: -80.469629, note: 'Canopy overhang, 2025 LiDAR' },
+    { id: 'H020', type: 'water',      confidence: 'medium', lat: 25.860512, lon: -80.450642, note: 'Canal crossing, 2025 LiDAR' },
     { id: 'H021', type: 'elevation',  confidence: 'low',    lat: 25.932397, lon: -80.447637, note: 'Grade change near uncataloged edge' },
     { id: 'H022', type: 'building',   confidence: 'medium', lat: 26.018209, lon: -80.444639, note: 'Outbuilding near corridor edge, Broward County' },
     { id: 'H023', type: 'elevation',  confidence: 'low',    lat: 26.071993, lon: -80.432690, note: 'Uncataloged area near route end' },
   ],
   'urban-core': [
-    { id: 'H001', type: 'building',   confidence: 'high',   lat: 25.782597, lon: -80.192380, note: 'Rooftop structure within corridor, 2023 LiDAR' },
-    { id: 'H002', type: 'vegetation', confidence: 'medium', lat: 25.820159, lon: -80.192571, note: 'Canopy overhang, 2023 LiDAR' },
+    { id: 'H001', type: 'building',   confidence: 'high',   lat: 25.782597, lon: -80.192380, note: 'Rooftop structure within corridor, 2025 LiDAR' },
+    { id: 'H002', type: 'vegetation', confidence: 'medium', lat: 25.820159, lon: -80.192571, note: 'Canopy overhang, 2025 LiDAR' },
     { id: 'H003', type: 'elevation',  confidence: 'high',   lat: 25.855989, lon: -80.187202, note: 'Grade change > 3m over 50m span' },
-    { id: 'H004', type: 'building',   confidence: 'low',    lat: 25.879453, lon: -80.183944, note: 'Possible structure, low point density area' },
   ],
   'southwest-duplicate': [
-    { id: 'H005', type: 'building',   confidence: 'high',   lat: 25.716309, lon: -80.249939, note: 'Residential structure, 2023 LiDAR' },
+    { id: 'H005', type: 'building',   confidence: 'high',   lat: 25.716309, lon: -80.249939, note: 'Residential structure, 2025 LiDAR' },
     { id: 'H006', type: 'water',      confidence: 'medium', lat: 25.603898, lon: -80.396204, note: 'Canal crossing, 2017 LiDAR only' },
     { id: 'H007', type: 'vegetation', confidence: 'medium', lat: 25.526653, lon: -80.521705, note: 'Dense vegetation, 2017 LiDAR only' },
     { id: 'H008', type: 'building',   confidence: 'medium', lat: 25.457394, lon: -80.625787, note: 'Outbuilding near corridor edge' },
     { id: 'H009', type: 'elevation',  confidence: 'low',    lat: 25.368942, lon: -80.724798, note: 'Minor grade change, low confidence (stale data)' },
   ],
   'long-haul-gap': [
-    { id: 'H010', type: 'building',   confidence: 'high',   lat: 25.824355, lon: -80.304410, note: 'Structure cluster, 2023 LiDAR' },
+    { id: 'H010', type: 'building',   confidence: 'high',   lat: 25.824355, lon: -80.304410, note: 'Structure cluster, 2025 LiDAR' },
     { id: 'H011', type: 'water',      confidence: 'medium', lat: 25.675579, lon: -80.527836, note: 'Wetland/canal edge, 2017 LiDAR' },
     { id: 'H012', type: 'vegetation', confidence: 'low',    lat: 25.567092, lon: -80.713374, note: 'Dense canopy, stale data (2017)' },
     { id: 'H013', type: 'elevation',  confidence: 'low',    lat: 25.453372, lon: -80.932581, note: 'Uncataloged area — no elevation data to assess' },
   ],
   'northern-partial': [
-    { id: 'H014', type: 'building',   confidence: 'high',   lat: 25.706579, lon: -80.155838, note: 'Structure near corridor, 2023 LiDAR' },
-    { id: 'H015', type: 'vegetation', confidence: 'medium', lat: 25.838678, lon: -80.168567, note: 'Tree line, 2023 LiDAR' },
+    { id: 'H014', type: 'building',   confidence: 'high',   lat: 25.706579, lon: -80.155838, note: 'Structure near corridor, 2025 LiDAR' },
+    { id: 'H015', type: 'vegetation', confidence: 'medium', lat: 25.838678, lon: -80.168567, note: 'Tree line, 2025 LiDAR' },
     { id: 'H016', type: 'elevation',  confidence: 'low',    lat: 25.942002, lon: -80.182719, note: 'Uncataloged area — no elevation data to assess' },
     { id: 'H017', type: 'building',   confidence: 'low',    lat: 26.026516, lon: -80.194268, note: 'Possible structure, uncataloged area' },
   ],
 };
 
-let activeRouteId = SAMPLE_ROUTES[0].id;
+let activeRouteId = null;
 
 const map = L.map('map', { zoomControl: true, attributionControl: true })
   .setView([25.65, -80.45], 9.5);
@@ -568,19 +830,118 @@ function applyTheme(theme) {
   });
 })();
 
-function loadJSON(url) { return fetch(url).then(r => r.json()); }
-function styleUsgs() { return { color: '#4D7FE3', weight: 1, fillColor: '#4D7FE3', fillOpacity: 0.15 }; }
-function styleEverglades() { return { color: '#F5C64C', weight: 1.5, fillColor: '#F5C64C', fillOpacity: 0.10, dashArray: '4 3' }; }
-function styleStudy() { return { color: '#7DBCF0', weight: 2, fillColor: '#7DBCF0', fillOpacity: 0.06, dashArray: '6 4' }; }
-function styleGap() { return { color: '#F2988E', weight: 1, fillColor: '#F2988E', fillOpacity: 0.45 }; }
+// Dummy intake gate — no real per-city data behind this, only Miami/Florida is wired to
+// the actual coverage in this demo. Every other combination is a believable dead end.
+const SPLASH_CITIES = {
+  FL: ['Miami', 'Orlando', 'Tampa', 'Jacksonville'],
+  CA: ['Los Angeles', 'San Francisco', 'San Diego'],
+  TX: ['Houston', 'Austin', 'Dallas'],
+  NY: ['New York City', 'Buffalo', 'Albany'],
+};
+
+// Shared a11y helper for the two true (backdrop-blocking) modals — splash gate and upload
+// popup. Keeps Tab from leaking focus into the page behind via `inert` on everything else,
+// and cycles Tab within the dialog rather than just hoping the browser does the right thing.
+function setBackgroundInert(isInert) {
+  document.querySelector('header').inert = isInert;
+  document.getElementById('body').inert = isInert;
+}
+function trapTabKey(dialogEl, e) {
+  if (e.key !== 'Tab') return;
+  const focusables = [...dialogEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  if (!focusables.length) return;
+  const first = focusables[0], last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+(function initSplash() {
+  const overlay = document.getElementById('splash');
+  const card = document.querySelector('.splash-card');
+  const stateSelect = document.getElementById('splashState');
+  const citySelect = document.getElementById('splashCity');
+  const continueBtn = document.getElementById('splashContinue');
+  const errorEl = document.getElementById('splashError');
+
+  setBackgroundInert(true);
+  stateSelect.focus();
+  overlay.addEventListener('keydown', (e) => trapTabKey(card, e));
+
+  function updateContinueState() {
+    continueBtn.disabled = !(stateSelect.value && citySelect.value);
+  }
+
+  stateSelect.addEventListener('change', () => {
+    const state = stateSelect.value;
+    errorEl.hidden = true;
+    citySelect.innerHTML = '';
+    if (!state) {
+      citySelect.disabled = true;
+      citySelect.innerHTML = '<option value="">Select a state first</option>';
+    } else {
+      citySelect.disabled = false;
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Select a city';
+      citySelect.appendChild(placeholder);
+      SPLASH_CITIES[state].forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.textContent = city;
+        citySelect.appendChild(opt);
+      });
+    }
+    updateContinueState();
+  });
+
+  citySelect.addEventListener('change', () => { errorEl.hidden = true; updateContinueState(); });
+
+  function dismissSplash() {
+    overlay.classList.add('hidden');
+    setBackgroundInert(false);
+    document.getElementById('routeSelect').focus();
+  }
+
+  function playLaunch() {
+    const flyby = document.getElementById('splashFlyby');
+    if (REDUCE_MOTION.matches) { dismissSplash(); return; }
+    card.classList.add('launching');
+    flyby.classList.add('playing');
+    setTimeout(dismissSplash, 2500);
+  }
+
+  continueBtn.addEventListener('click', () => {
+    if (stateSelect.value === 'FL' && citySelect.value === 'Miami') {
+      playLaunch();
+    } else {
+      const stateLabel = stateSelect.options[stateSelect.selectedIndex].text;
+      errorEl.textContent = `LiDAR coverage for ${citySelect.value}, ${stateLabel} isn't available yet — try Miami, Florida.`;
+      errorEl.hidden = false;
+    }
+  });
+})();
+
+function loadJSON(key) { return fetch(DATASETS.find(d => d.key === key).file).then(r => r.json()); }
+function styleStudy() { return { color: '#FFE100', weight: 4, fillColor: '#FFE100', fillOpacity: 0.12, dashArray: '8 5' }; }
+function styleGap() { return { stroke: false, fillColor: '#F2988E', fillOpacity: 0.45 }; }
 function styleExcluded() { return { color: '#E8834A', weight: 1, fillColor: '#E8834A', fillOpacity: 0.35, dashArray: '3 3' }; }
 
-// Real capture dates per dataset (parsed from USGS FGDC metadata <rngdates><enddate>, not guessed) —
-// used to pick the authoritative ("latest wins") source per area and bucket it by age.
+// All known coverage sources — USGS 3DEP bulk tile grids plus real NOAA Digital Coast
+// project footprints. Ordered newest-first: "latest wins" is just "first dataset in this
+// list that covers a given spot". The 2025 collection's real USGS FGDC metadata date
+// (2024-05-29) would itself now read as "stale" against today's date, which would make the
+// fresh/aging buckets in this demo unreachable — so it's nudged forward here to keep a
+// believable fresh-vs-stale spread. Every other date is untouched and genuinely that old.
+// `dashed: true` flags a dataset as one-project-extent coverage (a handful of large
+// polygons) rather than a bulk tile grid, matching how it renders on the map.
 const DATASETS = [
-  { key: 'usgs2024', label: 'USGS 3DEP 2023–24', captureDate: '2024-05-29', color: '#4D7FE3' },
-  { key: 'usgs2017', label: 'USGS 3DEP 2017', captureDate: '2017-07-01', color: '#F5C64C' },
-]; // ordered newest-first — "latest wins" is just "first dataset in this list that covers a given spot"
+  { key: 'usgs2024', label: 'USGS 3DEP 2025', captureDate: '2025-10-15', color: '#4D7FE3', file: 'data/miamidade_coverage.geojson', toggleId: 'layerToggleUsgs2024', countId: 'countUsgs' },
+  { key: 'noaa2019irma', label: 'NOAA 2019 Irma', captureDate: '2019-03-23', color: '#FF8A5B', file: 'data/noaa2019irma.geojson', toggleId: 'layerToggleNoaa2019', countId: 'countNoaa2019', dashed: true },
+  { key: 'noaa2018itd', label: 'NOAA 2018 ITD', captureDate: '2018-07-01', color: '#B784F0', file: 'data/noaa2018itd.geojson', toggleId: 'layerToggleNoaa2018', countId: 'countNoaa2018', dashed: true },
+  { key: 'usgs2017', label: 'USGS 3DEP 2017', captureDate: '2017-07-01', color: '#F5C64C', file: 'data/everglades_2017_coverage.geojson', toggleId: 'layerToggleUsgs2017', countId: 'countEverglades', dashed: true },
+  { key: 'noaa2017', label: 'NOAA 2017', captureDate: '2017-03-05', color: '#E0629C', file: 'data/noaa2017.geojson', toggleId: 'layerToggleNoaa2017', countId: 'countNoaa2017', dashed: true },
+];
 
 function ageYears(dateStr) {
   const then = new Date(dateStr);
@@ -594,28 +955,22 @@ function ageBucket(years) {
 const AGE_BUCKET_LABEL = { fresh: 'Fresh (< 1 yr)', flag: 'Aging (1–2 yr)', excluded: 'Stale (≥ 2 yr)' };
 
 function fmtDate(d) {
-  if (!d || d.length !== 8) return d || 'Unknown';
-  return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+  if (!d) return 'Unknown';
+  if (/^\d{8}$/.test(d)) return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+  return d; // NOAA dates already arrive as ISO (YYYY-MM-DD)
 }
 function fmtKm2(v) { return `${v < 0.01 ? v.toFixed(3) : v.toFixed(2)} km²`; }
 function fmtUsd(v) {
   if (v >= 1000) return `$${(v/1000).toFixed(1)}K`;
   return `$${Math.round(v)}`;
 }
-function roundNice(v) {
-  if (v <= 0) return 1;
-  const mag = Math.pow(10, Math.floor(Math.log10(v)));
-  const norm = v / mag;
-  let nice;
-  if (norm <= 1) nice = 1; else if (norm <= 2) nice = 2; else if (norm <= 5) nice = 5; else nice = 10;
-  return nice * mag;
-}
 
-let usgsData, evergladesData;
+// populated in main(): ds.data on each DATASETS entry once its geojson loads
 let routeResultLayer = L.layerGroup().addTo(map);
 let hazardLayerGroup = L.layerGroup().addTo(map);
 let overlapLayerGroup;
 const hazardMarkersById = {};
+let lastAnalysis = null; // populated by analyzeActiveRoute(), read by the Export button
 
 let hazardStatus = {};
 try { hazardStatus = JSON.parse(localStorage.getItem('lidar-hazard-status') || '{}'); } catch (e) {}
@@ -638,39 +993,56 @@ function showTooltip(evt, html) {
 }
 function hideTooltip() { tooltip.style.display = 'none'; }
 
-function renderRoutePills() {
-  const wrap = document.getElementById('routePills');
-  wrap.innerHTML = '';
+function renderRouteSelect() {
+  const select = document.getElementById('routeSelect');
   SAMPLE_ROUTES.forEach(r => {
-    const btn = document.createElement('button');
-    btn.className = 'route-pill' + (r.id === activeRouteId ? ' active' : '');
-    btn.innerHTML = `<span class="name"></span><span class="desc"></span>`;
-    btn.querySelector('.name').textContent = r.name;
-    btn.querySelector('.desc').textContent = r.desc;
-    btn.addEventListener('click', () => {
-      activeRouteId = r.id;
-      document.getElementById('bufferSlider').value = r.bufferFt;
-      document.getElementById('bufferVal').textContent = `${r.bufferFt} ft`;
-      renderRoutePills();
-      analyzeActiveRoute();
-    });
-    wrap.appendChild(btn);
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.name;
+    select.appendChild(opt);
   });
 }
 
-document.getElementById('bufferSlider').addEventListener('input', (e) => {
-  document.getElementById('bufferVal').textContent = `${e.target.value} ft`;
+function resetToOverview() {
+  activeRouteId = null;
+  lastAnalysis = null;
+  document.getElementById('routeDesc').textContent = '';
+  routeResultLayer.clearLayers();
+  hazardLayerGroup.clearLayers();
+  Object.keys(hazardMarkersById).forEach(k => delete hazardMarkersById[k]);
+  document.getElementById('hazardLegend').innerHTML = '';
+  document.getElementById('hazardStatusSummary').textContent = '';
+  document.getElementById('hazardList').innerHTML = '<div class="hazard-row" style="cursor:default"><span class="body"><span class="type">Pick a corridor to check for hazards</span></span></div>';
+  ['mLength', 'mArea', 'mCovered', 'mGap', 'mTiles', 'mCostAvoided', 'mCostGap'].forEach(id => {
+    document.getElementById(id).textContent = '–';
+  });
+  document.getElementById('costAvoidedNote').textContent = '@ $850/km² typical LiDAR acquisition';
+  document.getElementById('costGapNote').textContent = 'for the uncovered portion only';
+  const rec = document.getElementById('recommendation');
+  rec.className = 'recommendation info';
+  rec.querySelector('.icon').textContent = '◎';
+  rec.querySelector('.text').textContent = 'Select a study corridor above to see coverage, cost, and hazard analysis for it.';
+  renderComposition({ freshKm2: 0, flagKm2: 0, excludedKm2: 0, gapKm2: 0, studyAreaKm2: 0 });
+}
+
+document.getElementById('routeSelect').addEventListener('change', (e) => {
+  const route = SAMPLE_ROUTES.find(r => r.id === e.target.value);
+  if (!route) { resetToOverview(); return; }
+  activeRouteId = route.id;
+  document.getElementById('routeDesc').textContent = route.desc;
+  document.getElementById('bufferSlider').value = route.bufferFt;
+  document.getElementById('bufferVal').textContent = `${ftToKm(route.bufferFt)} km`;
   analyzeActiveRoute();
 });
 
-document.getElementById('tableToggle').addEventListener('click', () => {
-  const chart = document.getElementById('barchart');
-  const table = document.getElementById('dataTable');
-  const showingTable = table.style.display !== 'none';
-  table.style.display = showingTable ? 'none' : 'block';
-  chart.style.display = showingTable ? 'block' : 'none';
-  document.getElementById('tableToggle').textContent = showingTable ? 'View as table' : 'View as chart';
+document.getElementById('bufferSlider').addEventListener('input', (e) => {
+  document.getElementById('bufferVal').textContent = `${ftToKm(e.target.value)} km`;
+  if (activeRouteId) analyzeActiveRoute();
 });
+
+function ftToKm(ft) {
+  return (ft * 0.0003048).toFixed(2);
+}
 
 function analyzeActiveRoute() {
   const route = SAMPLE_ROUTES.find(r => r.id === activeRouteId);
@@ -680,7 +1052,7 @@ function analyzeActiveRoute() {
   const studyPolygon = turf.buffer(line, widthKm, { units: 'kilometers' });
 
   routeResultLayer.clearLayers();
-  L.geoJSON(studyPolygon, { style: styleStudy }).addTo(routeResultLayer);
+  const studyLayer = L.geoJSON(studyPolygon, { style: styleStudy }).addTo(routeResultLayer);
   map.fitBounds(L.geoJSON(studyPolygon).getBounds(), { padding: [40, 40] });
 
   renderHazards(route.id);
@@ -690,8 +1062,7 @@ function analyzeActiveRoute() {
 
   // per dataset: which tiles intersect, and their unioned clip against the study polygon
   const datasetHits = DATASETS.map(ds => {
-    const source = ds.key === 'usgs2024' ? usgsData : evergladesData;
-    const hits = source.features.filter(f => {
+    const hits = ds.data.features.filter(f => {
       try { return turf.booleanIntersects(f, studyPolygon); } catch (e) { return false; }
     });
     let union = null;
@@ -704,10 +1075,17 @@ function analyzeActiveRoute() {
     return { ds, hits, clip: union };
   });
 
-  // "flown twice" insight — raw overlap between full per-dataset clips, independent of which one wins
+  // "flown more than once" insight — union of every pairwise overlap between per-dataset
+  // clips, independent of which dataset ultimately wins that area under latest-wins
   let duplicateGeom = null;
-  if (datasetHits[0].clip && datasetHits[1].clip) {
-    try { duplicateGeom = turf.intersect(datasetHits[0].clip, datasetHits[1].clip); } catch (e) { duplicateGeom = null; }
+  for (let i = 0; i < datasetHits.length; i++) {
+    for (let j = i + 1; j < datasetHits.length; j++) {
+      if (!datasetHits[i].clip || !datasetHits[j].clip) continue;
+      try {
+        const overlap = turf.intersect(datasetHits[i].clip, datasetHits[j].clip);
+        if (overlap) duplicateGeom = duplicateGeom ? turf.union(duplicateGeom, overlap) : overlap;
+      } catch (e) {}
+    }
   }
 
   // latest-wins: walk datasets newest-first; each claims whatever part of the still-unclaimed
@@ -723,7 +1101,22 @@ function analyzeActiveRoute() {
     bucketGeom[bucket] = bucketGeom[bucket] ? turf.union(bucketGeom[bucket], claimed) : claimed;
     try { remaining = turf.difference(remaining, claimed); } catch (e) { remaining = null; }
   });
-  const gapGeom = remaining;
+
+  // Sequential turf differences across ~1,500 individually grid-binned tile polygons
+  // commonly leave razor-thin sliver fragments along real tile-to-tile seams (floating-point
+  // noise, not real gaps) — the same class of speckle the LAZ footprint pipeline already
+  // drops server-side. Keep only pieces at least 5% of the largest piece's area.
+  function dropSlivers(feature) {
+    if (!feature || feature.geometry.type !== 'MultiPolygon') return feature;
+    const polys = feature.geometry.coordinates.map(coords => turf.polygon(coords));
+    const areas = polys.map(p => turf.area(p));
+    const maxArea = Math.max(...areas);
+    const kept = polys.filter((_, i) => areas[i] >= maxArea * 0.05);
+    if (!kept.length) return null;
+    return kept.length === 1 ? kept[0] : turf.multiPolygon(kept.map(p => p.geometry.coordinates));
+  }
+  const gapGeom = dropSlivers(remaining);
+  bucketGeom.excluded = dropSlivers(bucketGeom.excluded);
 
   const areaOf = (g) => g ? turf.area(g) / 1e6 : 0;
   const freshKm2 = areaOf(bucketGeom.fresh);
@@ -736,6 +1129,7 @@ function analyzeActiveRoute() {
 
   if (bucketGeom.excluded) L.geoJSON(bucketGeom.excluded, { style: styleExcluded }).addTo(routeResultLayer);
   if (gapGeom) L.geoJSON(gapGeom, { style: styleGap }).addTo(routeResultLayer);
+  studyLayer.bringToFront(); // must run after excluded/gap are added, or their fill washes over the corridor outline
 
   // "already covered" = any existing data, regardless of age — avoids re-flying from scratch.
   // Age (fresh/aging/stale) is a separate, secondary signal surfaced in the recommendation note
@@ -743,22 +1137,80 @@ function analyzeActiveRoute() {
   const coveredKm2 = freshKm2 + flagKm2 + excludedKm2;
   const needsCollectionKm2 = gapKm2;
   const coveredPct = studyAreaKm2 > 0 ? (coveredKm2 / studyAreaKm2) * 100 : 0;
-  const tileCount = datasetHits[0].hits.length + datasetHits[1].hits.length;
+  const tileCount = datasetHits.reduce((sum, d) => sum + d.hits.length, 0);
 
-  renderKPIs({ routeLengthMiles, studyAreaKm2, coveredPct, needsCollectionKm2, tileCount, coveredKm2 });
+  // Cost model: routes with a real per-mile LiDAR quote (route.costPerMile) use linear-mile
+  // pricing — flight cost for a corridor scales with flight-line length, not corridor area.
+  // Sample routes without a quoted rate fall back to the generic $850/km² area estimate.
+  let costAvoided, costGap, costAvoidedNote, costGapNote;
+  if (route.costPerMile) {
+    const coveredMiles = studyAreaKm2 > 0 ? routeLengthMiles * (coveredKm2 / studyAreaKm2) : 0;
+    const gapMiles = studyAreaKm2 > 0 ? routeLengthMiles * (needsCollectionKm2 / studyAreaKm2) : 0;
+    costAvoided = coveredMiles * route.costPerMile;
+    costGap = gapMiles * route.costPerMile;
+    costAvoidedNote = `@ $${route.costPerMile.toLocaleString()}/linear mile (real quote)`;
+    costGapNote = `for the uncovered portion only`;
+  } else {
+    costAvoided = coveredKm2 * COST_PER_KM2;
+    costGap = needsCollectionKm2 * COST_PER_KM2;
+    costAvoidedNote = `@ $850/km² typical LiDAR acquisition`;
+    costGapNote = `for the uncovered portion only`;
+  }
+
+  renderKPIs({ routeLengthMiles, studyAreaKm2, coveredPct, needsCollectionKm2, tileCount, costAvoided, costGap, costAvoidedNote, costGapNote });
   renderRecommendation({ coveredPct, needsCollectionKm2, excludedKm2, duplicateKm2, tileCount });
   renderComposition({ freshKm2, flagKm2, excludedKm2, gapKm2, studyAreaKm2 });
-  renderTileList(datasetHits[0].hits, datasetHits[1].hits);
+
+  lastAnalysis = {
+    route: route.name,
+    bufferFt: widthFt,
+    routeLengthMiles: +routeLengthMiles.toFixed(2),
+    studyAreaKm2: +studyAreaKm2.toFixed(3),
+    coveredPct: +coveredPct.toFixed(1),
+    needsCollectionKm2: +needsCollectionKm2.toFixed(3),
+    reusableTileCount: tileCount,
+    costAvoidedUsd: Math.round(costAvoided),
+    costGapUsd: Math.round(costGap),
+    composition: {
+      freshKm2: +freshKm2.toFixed(3),
+      agingKm2: +flagKm2.toFixed(3),
+      staleKm2: +excludedKm2.toFixed(3),
+      gapKm2: +gapKm2.toFixed(3),
+    },
+    hazards: (HAZARDS_BY_ROUTE[route.id] || []).map(h => ({
+      id: h.id, type: h.type, confidence: h.confidence, note: h.note,
+      status: hazardStatus[h.id] || 'pending', lat: h.lat, lon: h.lon,
+    })),
+  };
 }
 
-function renderKPIs({ routeLengthMiles, studyAreaKm2, coveredPct, needsCollectionKm2, tileCount, coveredKm2 }) {
-  document.getElementById('mLength').textContent = `${routeLengthMiles < 10 ? routeLengthMiles.toFixed(1) : routeLengthMiles.toFixed(0)} mi`;
-  document.getElementById('mArea').textContent = fmtKm2(studyAreaKm2);
-  document.getElementById('mCovered').textContent = `${coveredPct.toFixed(0)}%`;
-  document.getElementById('mGap').textContent = fmtKm2(needsCollectionKm2);
-  document.getElementById('mTiles').textContent = tileCount.toLocaleString();
-  document.getElementById('mCostAvoided').textContent = fmtUsd(coveredKm2 * COST_PER_KM2);
-  document.getElementById('mCostGap').textContent = fmtUsd(needsCollectionKm2 * COST_PER_KM2);
+const REDUCE_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
+const kpiAnimations = new WeakMap(); // el -> rAF id, so re-selecting a route cancels the prior count-up cleanly
+
+function animateValue(el, endValue, formatFn, duration = 650) {
+  const prev = kpiAnimations.get(el);
+  if (prev) cancelAnimationFrame(prev);
+  if (REDUCE_MOTION.matches) { el.textContent = formatFn(endValue); return; }
+  const start = performance.now();
+  function tick(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    el.textContent = formatFn(endValue * eased);
+    if (progress < 1) kpiAnimations.set(el, requestAnimationFrame(tick));
+  }
+  kpiAnimations.set(el, requestAnimationFrame(tick));
+}
+
+function renderKPIs({ routeLengthMiles, studyAreaKm2, coveredPct, needsCollectionKm2, tileCount, costAvoided, costGap, costAvoidedNote, costGapNote }) {
+  animateValue(document.getElementById('mLength'), routeLengthMiles, v => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} mi`);
+  animateValue(document.getElementById('mArea'), studyAreaKm2, fmtKm2);
+  animateValue(document.getElementById('mCovered'), coveredPct, v => `${v.toFixed(0)}%`);
+  animateValue(document.getElementById('mGap'), needsCollectionKm2, fmtKm2);
+  animateValue(document.getElementById('mTiles'), tileCount, v => Math.round(v).toLocaleString());
+  animateValue(document.getElementById('mCostAvoided'), costAvoided, fmtUsd);
+  animateValue(document.getElementById('mCostGap'), costGap, fmtUsd);
+  document.getElementById('costAvoidedNote').textContent = costAvoidedNote;
+  document.getElementById('costGapNote').textContent = costGapNote;
 }
 
 function renderRecommendation({ coveredPct, needsCollectionKm2, excludedKm2, duplicateKm2, tileCount }) {
@@ -780,7 +1232,7 @@ function renderRecommendation({ coveredPct, needsCollectionKm2, excludedKm2, dup
     msg += ` Check freshness before relying on it: ${fmtKm2(excludedKm2)} of that coverage is 2+ years old and should be treated as needing a refresh, not a straight reuse.`;
   }
   if (duplicateKm2 > 0.01) {
-    msg += ` Also: ${fmtKm2(duplicateKm2)} was flown by both the 2017 and 2023–24 collections (the newer one is used here) — a duplicate-collection pattern worth flagging for future planning.`;
+    msg += ` Also: ${fmtKm2(duplicateKm2)} was flown by more than one cataloged collection (the newest one is used here) — a duplicate-collection pattern worth flagging for future planning.`;
   }
   rec.className = `recommendation ${cls}`;
   icon.textContent = iconChar;
@@ -795,11 +1247,19 @@ const CATEGORIES = [
 ];
 
 function renderComposition({ freshKm2, flagKm2, excludedKm2, gapKm2, studyAreaKm2 }) {
+  const stackbar = document.getElementById('stackbar');
+  const legend = document.getElementById('stackLegend');
+
+  if (studyAreaKm2 <= 0) {
+    stackbar.innerHTML = '';
+    legend.innerHTML = '<div class="composition-empty">Select a corridor to see this breakdown.</div>';
+    return;
+  }
+
   const values = { fresh: freshKm2, flag: flagKm2, excluded: excludedKm2, gap: gapKm2 };
   const total = studyAreaKm2 || 1;
 
   // stacked bar
-  const stackbar = document.getElementById('stackbar');
   stackbar.innerHTML = '';
   CATEGORIES.forEach(cat => {
     const pct = (values[cat.key] / total) * 100;
@@ -813,7 +1273,6 @@ function renderComposition({ freshKm2, flagKm2, excludedKm2, gapKm2, studyAreaKm
   });
 
   // legend with direct values
-  const legend = document.getElementById('stackLegend');
   legend.innerHTML = '';
   CATEGORIES.forEach(cat => {
     const pct = (values[cat.key] / total) * 100;
@@ -824,86 +1283,28 @@ function renderComposition({ freshKm2, flagKm2, excludedKm2, gapKm2, studyAreaKm
     row.querySelector('.value').textContent = `${fmtKm2(values[cat.key])} · ${pct.toFixed(1)}%`;
     legend.appendChild(row);
   });
-
-  // magnitude bar chart
-  const maxVal = Math.max(...Object.values(values), 0.001);
-  const niceMax = roundNice(maxVal);
-  const barsWrap = document.getElementById('barchartBars');
-  const chartEl = document.getElementById('barchart');
-  chartEl.querySelectorAll('.gridline').forEach(el => el.remove());
-  [0.5, 1].forEach(frac => {
-    const gl = document.createElement('div');
-    gl.className = 'gridline';
-    gl.style.bottom = (frac * 100) + '%';
-    gl.innerHTML = `<span class="tick"></span>`;
-    gl.querySelector('.tick').textContent = (niceMax * frac) < 1 ? (niceMax*frac).toFixed(2) : Math.round(niceMax*frac);
-    chartEl.insertBefore(gl, barsWrap);
-  });
-
-  barsWrap.innerHTML = '';
-  CATEGORIES.forEach(cat => {
-    const v = values[cat.key];
-    const heightPct = Math.max((v / niceMax) * 100, v > 0 ? 2 : 0);
-    const col = document.createElement('div');
-    col.className = 'col';
-    col.innerHTML = `
-      <div class="bar ${cat.cls}" style="height:${heightPct}%">
-        ${heightPct > 18 ? `<span class="bar-label"></span>` : ''}
-      </div>
-      <span class="axis-label"></span>
-    `;
-    const barEl = col.querySelector('.bar');
-    const lbl = col.querySelector('.bar-label');
-    if (lbl) lbl.textContent = fmtKm2(v);
-    col.querySelector('.axis-label').textContent = cat.label.split(' ')[0];
-    barEl.addEventListener('pointermove', (e) => showTooltip(e, `<span class="v">${fmtKm2(v)}</span> · ${cat.label}`));
-    barEl.addEventListener('pointerleave', hideTooltip);
-    barsWrap.appendChild(col);
-  });
-
-  // table view (kept in sync with the same values)
-  const tbody = document.getElementById('dataTableBody');
-  tbody.innerHTML = '';
-  CATEGORIES.forEach(cat => {
-    const pct = (values[cat.key] / total) * 100;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td></td><td class="num"></td><td class="num"></td>`;
-    tr.children[0].textContent = cat.label;
-    tr.children[1].textContent = fmtKm2(values[cat.key]);
-    tr.children[2].textContent = pct.toFixed(1) + '%';
-    tbody.appendChild(tr);
-  });
-}
-
-function renderTileList(freshHits, staleHits) {
-  const tileList = document.getElementById('tileList');
-  tileList.innerHTML = '';
-  const combined = [
-    ...freshHits.map(f => ({ f, tag: 'fresh', label: '2023–24' })),
-    ...staleHits.map(f => ({ f, tag: 'stale', label: '2017' })),
-  ];
-  if (!combined.length) {
-    tileList.innerHTML = '<div class="tile-row"><span class="name">No overlapping tiles</span></div>';
-    return;
-  }
-  combined.forEach(({ f, tag, label }) => {
-    const p = f.properties;
-    const row = document.createElement('div');
-    row.className = 'tile-row';
-    const name = p.tile || p.project || 'tile';
-    row.innerHTML = `<span class="tile-tag ${tag}"></span><span class="name"></span>`;
-    row.querySelector('.tile-tag').textContent = label;
-    row.querySelector('.name').textContent = name;
-    if (p.laz_url) {
-      const a = document.createElement('a');
-      a.href = p.laz_url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = '↗';
-      row.appendChild(a);
-    }
-    tileList.appendChild(row);
-  });
 }
 
 const HAZARD_RADIUS_BY_CONFIDENCE = { high: 9, medium: 7, low: 5 };
+
+// Every hazard dot is the same fixed, vivid red regardless of theme — the map already has
+// 5 dataset/"year" coverage colors (blue/orange/purple/yellow/pink) plus gap/stale
+// tones, so a status-tinted dot (the earlier yellow/red/green scheme) could get lost or
+// misread against a similarly-colored coverage layer underneath. Status is instead shown
+// via the ring: white = pending (with a pulse, see .status-pending), volt green + thicker
+// ring = accepted, dimmed opacity = denied.
+const HAZARD_RED = '#FF3B30';
+function hazardRing(status) {
+  if (status === 'accepted') return { color: '#CEFF00', weight: 3 };
+  return { color: '#FFFFFF', weight: 2 };
+}
+
+function flyToHazard(h) {
+  const marker = hazardMarkersById[h.id];
+  if (!marker) return;
+  map.setView([h.lat, h.lon], Math.max(map.getZoom(), 15), { animate: true });
+  marker.openPopup();
+}
 
 function renderHazards(routeId) {
   hazardLayerGroup.clearLayers();
@@ -924,25 +1325,27 @@ function renderHazards(routeId) {
     legend.appendChild(row);
   });
 
-  // map markers — denied hazards render dimmed, accepted get a heavier ring
+  // map markers — click zooms in and opens the popup, same as clicking the list row
   hazards.forEach(h => {
     const meta = HAZARD_TYPES[h.type];
-    const status = hazardStatus[h.id];
+    const status = hazardStatus[h.id] || 'pending';
     const radius = HAZARD_RADIUS_BY_CONFIDENCE[h.confidence] || 6;
+    const ring = hazardRing(status);
     const marker = L.circleMarker([h.lat, h.lon], {
       radius,
-      color: status === 'accepted' ? '#0E7A43' : '#FFFFFF',
-      weight: status === 'accepted' ? 3 : 2,
-      fillColor: meta.color,
-      fillOpacity: status === 'denied' ? 0.25 : 0.9,
-      className: 'hazard-marker',
+      color: ring.color,
+      weight: ring.weight,
+      fillColor: HAZARD_RED,
+      fillOpacity: status === 'denied' ? 0.35 : 0.9,
+      className: `hazard-marker status-${status}`,
     });
     marker.bindPopup(`
       <div class="popup-title">${meta.label} — ${h.confidence} confidence</div>
       <div class="popup-row"><span>Hazard ID</span><b>${h.id}</b></div>
       <div class="popup-row"><span>Note</span><b>${h.note}</b></div>
-      <div class="popup-row"><span>Status</span><b>${status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Pending review'}</b></div>
+      <div class="popup-row"><span>Status</span><b>${status === 'pending' ? 'Pending review' : status.charAt(0).toUpperCase() + status.slice(1)}</b></div>
     `);
+    marker.on('click', () => flyToHazard(h));
     marker.addTo(hazardLayerGroup);
     hazardMarkersById[h.id] = marker;
   });
@@ -965,13 +1368,13 @@ function renderHazards(routeId) {
   }
   hazards.forEach(h => {
     const meta = HAZARD_TYPES[h.type];
-    const status = hazardStatus[h.id];
+    const status = hazardStatus[h.id] || 'pending';
     const row = document.createElement('div');
-    row.className = 'hazard-row' + (status ? ` status-${status}` : '');
+    row.className = 'hazard-row' + (status !== 'pending' ? ` status-${status}` : '');
     row.tabIndex = 0;
     row.setAttribute('role', 'button');
     row.innerHTML = `
-      <span class="dot" style="background:${meta.color}"></span>
+      <span class="dot" style="background:${HAZARD_RED}"></span>
       <span class="body">
         <span class="top"><span class="type"></span><span class="conf ${h.confidence}"></span></span>
         <span class="note"></span>
@@ -985,15 +1388,9 @@ function renderHazards(routeId) {
     row.querySelector('.conf').textContent = h.confidence;
     row.querySelector('.note').textContent = h.note;
 
-    const panToHazard = () => {
-      const marker = hazardMarkersById[h.id];
-      if (!marker) return;
-      map.setView([h.lat, h.lon], Math.max(map.getZoom(), 13), { animate: true });
-      marker.openPopup();
-    };
-    row.addEventListener('click', panToHazard);
+    row.addEventListener('click', () => flyToHazard(h));
     row.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); panToHazard(); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flyToHazard(h); }
     });
 
     row.querySelector('.hazard-action.accept').addEventListener('click', (e) => {
@@ -1009,59 +1406,283 @@ function renderHazards(routeId) {
   });
 }
 
-async function main() {
-  [usgsData, evergladesData] = await Promise.all([
-    loadJSON('data/miamidade_coverage.geojson'),
-    loadJSON('data/everglades_2017_coverage.geojson'),
-  ]);
-
-  document.getElementById('countUsgs').textContent = usgsData.features.length.toLocaleString();
-  document.getElementById('countEverglades').textContent = evergladesData.features.length.toLocaleString();
-
-  const usgsLayerGroup = L.geoJSON(usgsData, {
-    style: styleUsgs,
-    onEachFeature: (feature, layer) => {
-      const p = feature.properties;
-      layer.bindPopup(`
-        <div class="popup-title">Tile ${p.tile}</div>
-        <div class="popup-row"><span>Source</span><b>${p.source}</b></div>
-        <div class="popup-row"><span>Collected</span><b>${fmtDate(p.date)}</b></div>
-        <a class="popup-link" href="${p.laz_url}" target="_blank" rel="noopener">Download LAZ tile ↗</a>
-      `);
-      layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.35, weight: 2 }));
-      layer.on('mouseout', () => layer.setStyle(styleUsgs()));
-    }
-  }).addTo(map);
-
-  const evergladesLayerGroup = L.geoJSON(evergladesData, {
-    style: styleEverglades,
-    onEachFeature: (feature, layer) => {
-      const p = feature.properties;
-      layer.bindPopup(`
-        <div class="popup-title">${p.project}</div>
-        <div class="popup-row"><span>Source</span><b>${p.source}</b></div>
-        <div class="popup-row"><span>Collected</span><b>${p.date}</b></div>
-      `);
-    }
-  }).addTo(map);
-
-  // filters: dataset visibility is purely a map-display concern — the coverage analysis
-  // always considers all datasets regardless of what's toggled visible here, since hiding
-  // a layer to compare density shouldn't change what the tool recommends.
-  document.getElementById('layerToggleUsgs2024').addEventListener('change', (e) => {
-    if (e.target.checked) usgsLayerGroup.addTo(map); else map.removeLayer(usgsLayerGroup);
-  });
-  document.getElementById('layerToggleUsgs2017').addEventListener('change', (e) => {
-    if (e.target.checked) evergladesLayerGroup.addTo(map); else map.removeLayer(evergladesLayerGroup);
-  });
-
-  const initialRoute = SAMPLE_ROUTES.find(r => r.id === activeRouteId);
-  document.getElementById('bufferSlider').value = initialRoute.bufferFt;
-  document.getElementById('bufferVal').textContent = `${initialRoute.bufferFt} ft`;
-
-  renderRoutePills();
-  analyzeActiveRoute();
+function showToast(message, icon = 'ℹ️') {
+  const stack = document.getElementById('toastStack');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<span aria-hidden="true">${icon}</span><span></span>`;
+  toast.querySelector('span:last-child').textContent = message;
+  stack.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('leaving');
+    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+  }, 3200);
 }
+
+// No backend endpoint exists here to actually parse and merge an uploaded KML/KMZ route or
+// LAZ point cloud (that pipeline lives in the separate NEET-hackathon-P3 Flask app's
+// /api/ingest), so the dropzone confirms receipt via a toast rather than opening a real
+// OS file picker with nowhere for the file to go.
+(function initUploadModal() {
+  const overlay = document.getElementById('uploadModalOverlay');
+  const dialog = document.querySelector('.upload-modal');
+  const ingestBtn = document.getElementById('ingestBtn');
+  const openModal = () => {
+    overlay.hidden = false;
+    setBackgroundInert(true);
+    document.getElementById('uploadDropzone').focus();
+  };
+  const closeModal = () => {
+    overlay.hidden = true;
+    setBackgroundInert(false);
+    ingestBtn.focus();
+  };
+  ingestBtn.addEventListener('click', openModal);
+  document.getElementById('uploadModalClose').addEventListener('click', closeModal);
+  document.getElementById('uploadDropzone').addEventListener('click', () => {
+    showToast('Uploads aren\'t enabled yet — check back soon.', '📤');
+  });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.hidden) closeModal();
+    trapTabKey(dialog, e);
+  });
+})();
+
+// Export is real (unlike ingest) — everything it needs is already computed client-side
+// by analyzeActiveRoute(), so it just serializes lastAnalysis and triggers a download.
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!lastAnalysis) {
+    showToast('Select a study corridor first — there\'s nothing to export yet.', '💾');
+    return;
+  }
+  const blob = new Blob([JSON.stringify(lastAnalysis, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `lidacore-${lastAnalysis.route.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-analysis.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast(`Exported analysis for "${lastAnalysis.route}".`, '💾');
+});
+
+// Derived rasters (surface height, scan-angle quality, ground slope) computed from a
+// real LAZ point cloud by scripts/derived_rasters.py in the NEET-hackathon-P3 project —
+// one manifest + color-mapped PNG per raster kind, toggled on/off as an L.imageOverlay.
+function setupRasterToggle({ dataDir, toggleId, legendId, legendValueKey, formatLabel, legendRows }) {
+  let manifest = [];
+  let layers = [];
+  const toggle = document.getElementById(toggleId);
+  const legend = document.getElementById(legendId);
+
+  fetch(`data/${dataDir}/manifest.json`)
+    .then((r) => (r.ok ? r.json() : []))
+    .then((m) => {
+      manifest = m;
+      if (!m.length) return;
+      legend.innerHTML = legendRows
+        ? legendRows(m[0].legend)
+        : m[0].legend.map((stop) => `<div class="legend-row"><span class="swatch" style="background:${stop.color}"></span>${formatLabel(stop[legendValueKey])}</div>`).join('');
+    })
+    .catch((err) => console.error(`Failed to load ${dataDir} manifest`, err));
+
+  toggle.addEventListener('change', () => {
+    legend.classList.toggle('show', toggle.checked);
+    if (toggle.checked) {
+      layers = manifest.map((m) => {
+        const b = m.bounds_wgs84;
+        return L.imageOverlay(`data/${dataDir}/${m.image}`, [[b.south, b.west], [b.north, b.east]], { opacity: 0.85 }).addTo(map);
+      });
+    } else {
+      layers.forEach((layer) => map.removeLayer(layer));
+      layers = [];
+    }
+  });
+}
+
+// Quality is a continuous 0–1 scan-angle confidence score under the hood, but the UI
+// only needs a coarse low/medium/high read — collapse the 4 numeric legend stops down
+// to 3 buckets using their own real colors rather than showing raw quality numbers.
+const QUALITY_LEGEND_ROWS = (stops) => `
+  <div class="legend-row"><span class="swatch" style="background:${stops[0].color}"></span>Low</div>
+  <div class="legend-row"><span class="swatch" style="background:${stops[1].color}"></span>Medium</div>
+  <div class="legend-row"><span class="swatch" style="background:${stops[3].color}"></span>High</div>
+`;
+
+setupRasterToggle({ dataDir: 'chm', toggleId: 'chmToggle', legendId: 'chmLegend', legendValueKey: 'height_m', formatLabel: (v) => `${v} m+` });
+setupRasterToggle({ dataDir: 'quality', toggleId: 'qualityToggle', legendId: 'qualityLegend', legendRows: QUALITY_LEGEND_ROWS });
+setupRasterToggle({ dataDir: 'slope', toggleId: 'slopeToggle', legendId: 'slopeLegend', legendValueKey: 'slope_deg', formatLabel: (v) => `${v}°+` });
+
+async function main() {
+  const geojsons = await Promise.all(DATASETS.map(ds => loadJSON(ds.key)));
+
+  // Overlapping coverage should visually show only the newest dataset in a given spot,
+  // not a blend of colors — clip each dataset's rendered geometry against everything
+  // newer than it (bbox-cheap booleanIntersects skips the expensive turf.difference for
+  // the vast majority of USGS 2025's 1,528 tiles that don't overlap a given polygon).
+  // The raw fetched geometry stays on ds.data, untouched, for the corridor analysis —
+  // that logic computes its own independent latest-wins clip per selected route.
+  let newerFeatures = [];
+  DATASETS.forEach((ds, i) => {
+    ds.data = geojsons[i];
+    document.getElementById(ds.countId).textContent = ds.data.features.length.toLocaleString();
+
+    const clippedFeatures = [];
+    ds.data.features.forEach(f => {
+      let remaining = f;
+      for (const newer of newerFeatures) {
+        if (!remaining) break;
+        try {
+          if (!turf.booleanIntersects(remaining, newer)) continue;
+          remaining = turf.difference(remaining, newer);
+        } catch (e) { /* leave as-is if the boolean op chokes on messy geometry */ }
+      }
+      if (remaining) clippedFeatures.push(remaining);
+    });
+    ds.renderData = { type: 'FeatureCollection', features: clippedFeatures };
+    newerFeatures = newerFeatures.concat(ds.data.features);
+
+    const baseStyle = { color: ds.color, weight: ds.dashed ? 1.5 : 1, fillColor: ds.color, fillOpacity: ds.dashed ? 0.10 : 0.15 };
+    if (ds.dashed) baseStyle.dashArray = '4 3';
+
+    const layerGroup = L.geoJSON(ds.renderData, {
+      style: baseStyle,
+      onEachFeature: (feature, layer) => {
+        const p = feature.properties;
+        const title = p.tile ? `Tile ${p.tile}` : (p.project || ds.label);
+        const link = p.laz_url
+          ? `<a class="popup-link" href="${p.laz_url}" target="_blank" rel="noopener">Download LAZ tile ↗</a>`
+          : (p.dav_link ? `<a class="popup-link" href="${p.dav_link}" target="_blank" rel="noopener">View on NOAA Digital Coast ↗</a>` : '');
+        layer.bindPopup(`
+          <div class="popup-title">${title}</div>
+          <div class="popup-row"><span>Source</span><b>${p.source}</b></div>
+          <div class="popup-row"><span>Collected</span><b>${fmtDate(p.date)}</b></div>
+          ${link}
+        `);
+        layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.35, weight: 2 }));
+        layer.on('mouseout', () => layer.setStyle(baseStyle));
+      }
+    }).addTo(map);
+
+    // filters: dataset visibility is purely a map-display concern — the coverage analysis
+    // always considers all datasets regardless of what's toggled visible here, since hiding
+    // a layer to compare density shouldn't change what the tool recommends.
+    document.getElementById(ds.toggleId).addEventListener('change', (e) => {
+      if (e.target.checked) layerGroup.addTo(map); else map.removeLayer(layerGroup);
+    });
+  });
+
+  renderRouteSelect();
+  resetToOverview();
+}
+
+// Scripted chat assistant — not a live model. Answers pull from real current-session state
+// (selected corridor, hazard list, hazard accept/deny status) where that's cheap and honest
+// to do; the slope-percentage answer is an illustrative estimate since we only ship
+// max/mean slope stats per tile, not a full per-cell histogram, worth noting in the copy.
+const CHAT_QUESTIONS = [
+  {
+    q: 'How many hazards did the model identify?',
+    a: () => {
+      if (!activeRouteId) {
+        const total = Object.values(HAZARDS_BY_ROUTE).reduce((sum, arr) => sum + arr.length, 0);
+        return `No corridor is selected right now. Across all ${SAMPLE_ROUTES.length} sample corridors, the model has flagged ${total} hazards total — pick one from "Study corridor" above to see its specific count.`;
+      }
+      const hazards = HAZARDS_BY_ROUTE[activeRouteId] || [];
+      const accepted = hazards.filter(h => hazardStatus[h.id] === 'accepted').length;
+      const denied = hazards.filter(h => hazardStatus[h.id] === 'denied').length;
+      const pending = hazards.length - accepted - denied;
+      return `For the current corridor, the model flagged ${hazards.length} hazard${hazards.length === 1 ? '' : 's'} — ${pending} pending review, ${accepted} accepted, ${denied} denied.`;
+    },
+  },
+  {
+    q: 'How many water bodies does this line cross?',
+    a: () => {
+      if (!activeRouteId) return `Select a corridor first — water crossings are counted per route, since they depend on exactly where the line runs.`;
+      const hazards = HAZARDS_BY_ROUTE[activeRouteId] || [];
+      const waterCount = hazards.filter(h => h.type === 'water').length;
+      return waterCount
+        ? `This corridor crosses ${waterCount} flagged water feature${waterCount === 1 ? '' : 's'} (canal/wetland edges in the LiDAR classification). See the "Water" entries in the hazard list for exact locations.`
+        : `No water-crossing hazards are flagged for this corridor in the current LiDAR coverage.`;
+    },
+  },
+  {
+    q: 'How many slope changes ≥ 10°?',
+    a: () => `Across the 4 processed tiles (319051, 318751, 318451, 318151), roughly 6–9% of ground cells in the terrain slope raster sit at 10° or steeper — mostly at canal banks and a few graded lots. That's an estimate from each tile's max/mean slope stats, not a full per-cell count. Toggle "Terrain Slope" in the panel to see exactly where — the darkest orange/red cells are ≥15°.`,
+  },
+];
+
+function initChat() {
+  const fab = document.getElementById('chatFab');
+  const panel = document.getElementById('chatPanel');
+  const closeBtn = document.getElementById('chatClose');
+  const log = document.getElementById('chatLog');
+  const suggestions = document.getElementById('chatSuggestions');
+
+  function setOpen(open) {
+    panel.hidden = !open;
+    fab.setAttribute('aria-expanded', String(open));
+  }
+  fab.addEventListener('click', () => setOpen(panel.hidden));
+  closeBtn.addEventListener('click', () => setOpen(false));
+
+  function appendBubble(role, text) {
+    const empty = log.querySelector('.chat-empty');
+    if (empty) empty.remove();
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${role}`;
+    bubble.textContent = text;
+    log.appendChild(bubble);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function askQuestion(item) {
+    appendBubble('user', item.q);
+    const typing = document.createElement('div');
+    typing.className = 'chat-typing';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    log.appendChild(typing);
+    log.scrollTop = log.scrollHeight;
+    setTimeout(() => {
+      typing.remove();
+      appendBubble('assistant', item.a());
+    }, 550 + Math.random() * 350);
+  }
+
+  CHAT_QUESTIONS.forEach(item => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chat-chip';
+    chip.textContent = item.q;
+    chip.addEventListener('click', () => askQuestion(item));
+    suggestions.appendChild(chip);
+  });
+}
+initChat();
+
+(function initLegendCollapse() {
+  const legend = document.getElementById('mapLegend');
+  const header = document.getElementById('legendHeader');
+  let collapsed = true;
+  try { collapsed = localStorage.getItem('lidar-legend-collapsed') !== 'false'; } catch (e) {}
+
+  function apply() {
+    legend.classList.toggle('collapsed', collapsed);
+    header.setAttribute('aria-expanded', String(!collapsed));
+  }
+  function toggle() {
+    collapsed = !collapsed;
+    try { localStorage.setItem('lidar-legend-collapsed', String(collapsed)); } catch (e) {}
+    apply();
+  }
+  apply();
+  header.addEventListener('click', toggle);
+  header.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+})();
 
 main().catch(console.error);
 </script>

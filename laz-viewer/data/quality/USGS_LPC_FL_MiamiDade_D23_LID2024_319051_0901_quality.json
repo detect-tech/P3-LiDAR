@@ -1,0 +1,31 @@
+{
+  "name": "USGS_LPC_FL_MiamiDade_D23_LID2024_319051_0901",
+  "image": "USGS_LPC_FL_MiamiDade_D23_LID2024_319051_0901_quality.png",
+  "bounds_wgs84": {
+    "south": 25.751304605226036,
+    "north": 25.762075904385668,
+    "west": -80.19842890316953,
+    "east": -80.18787986141487
+  },
+  "cell_size_m": 2.95,
+  "legend": [
+    {
+      "quality": 0.0,
+      "color": "rgba(220,40,40,0.78)"
+    },
+    {
+      "quality": 0.5,
+      "color": "rgba(255,210,60,0.75)"
+    },
+    {
+      "quality": 0.8,
+      "color": "rgba(140,210,100,0.67)"
+    },
+    {
+      "quality": 1.0,
+      "color": "rgba(60,180,90,0.59)"
+    }
+  ],
+  "max_quality": 1.0,
+  "mean_quality": 0.75
+}
